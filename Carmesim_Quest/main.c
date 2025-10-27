@@ -217,36 +217,38 @@ int main (int argc, char* args[])
 
     SDL_Renderer* ren = SDL_CreateRenderer(win, -1, SDL_RENDERER_ACCELERATED);
 
-    /*carrgar imagens
-    OBI img1 = criarObjetoImagem("teste_fundo_Menu.png", ren, 0, 0, 800, 600);
-    OBI img2 = criarObjetoImagem("vila_place_holder.png", ren, 0, 0, 800, 500);
-    OBI img3 = criarObjetoImagem("planicie_place_holder.png", ren, 0, 0, 800, 500);
-    OBI img4 = criarObjetoImagem("pantano_place_holder.png", ren, 0, 0, 800, 500);*/
+    
 
     //cria a lista
     ListaImagens* listaimagens = criarListaImagens();
 
     //adiciona na lista
-    adicionarImagem(listaimagens, criarObjetoImagem("teste_fundo_Menu.png", ren, 0, 0, 800, 600), "fundo_menu");
+    adicionarImagem(listaimagens, criarObjetoImagem("Castle.png", ren, 0, 0, 800, 600), "Menu_Principal");
     adicionarImagem(listaimagens, criarObjetoImagem("vila_place_holder.png", ren, 0, 0, 800, 500), "vila");
     adicionarImagem(listaimagens, criarObjetoImagem("planicie_place_holder.png", ren, 0, 0, 800, 500), "planicie");
     adicionarImagem(listaimagens, criarObjetoImagem("pantano_place_holder.png", ren, 0, 0, 800, 500), "pantano");
-
+    adicionarImagem(listaimagens, criarObjetoImagem("Carregamento.png", ren, 0, 0, 800, 600), "Tela_de_Carregamento");
 
     // Carregar a fonte uma única vez no início
     TTF_Font* fnt = TTF_OpenFont("minecraft_font.ttf", 24);
     SDL_Color corTexto = { 0, 255, 255, 255};
+    SDL_Color ver = {255, 0, 0, 255};
 
     int texto_visivel1 = 0;
     TTR hello = CarregaTexto(ren, fnt, "Deu certo", corTexto);
     TTR sdl = CarregaTexto(ren, fnt, "SDL2 com texto", corTexto);
+    
+    int texto_visivel3 = 1; 
+    TTR iniciar = CarregaTexto(ren, fnt, "INICIAR", ver);
+    TTR sair = CarregaTexto(ren, fnt, "SAIR", ver);
+    TTR titulo = CarregaTexto(ren, fnt, "CARMESIM QUEST", ver);
 
     int texto_visivel2 = 0;
     TTR estafunc = CarregaTexto(ren, fnt, "O texto esta carregando aqui!!", corTexto);
 
     //blocos
-    SDL_Rect r = { 0, 500, 200, 200 };
-    SDL_Rect r2 = { 600, 500, 200, 200 };
+    SDL_Rect r = { 200, 500, 150, 40 };
+    SDL_Rect r2 = { 500, 500, 100, 40 };
     SDL_Rect r3 = { 0, 500, 800, 200};
 
     bool blck1_view = true;
@@ -265,6 +267,7 @@ int main (int argc, char* args[])
     bool vrfim1 = true;
     bool vrfim2 = false;
     bool vrfim3 = false;
+    bool vrfim4 = false;
 
     //cria o protagonista
     CHC prtg;
@@ -281,6 +284,7 @@ int main (int argc, char* args[])
     int blue = 255;
     int green = 255;
     SDL_Event evt;
+    int clique_comeco = 0;
 
     while(stop == 0){
         Uint32 antes = SDL_GetTicks();
@@ -316,11 +320,13 @@ int main (int argc, char* args[])
             // MOVER a verificação do clique do mouse para DENTRO do if(isevt)
             if(evt.type == SDL_MOUSEBUTTONDOWN){
                 SDL_GetMouseState(&mouseX, &mouseY);
-
+                
                 //click em r
                 if(cfm_click1 == true){
-
+                    
                     if(mouseX >= r.x && mouseX <= r.x + r.w && mouseY >= r.y && mouseY <= r.y + r.h){
+                        vrfim4 = true;
+                        texto_visivel3 = 0;
 
                         /*printf("\nX:%d, Y:%d", mouseX, mouseY);
                         red = rand() % 255;
@@ -357,6 +363,7 @@ int main (int argc, char* args[])
 
                     if(mouseX >= r2.x && mouseX <= r2.x + r2.w && mouseY >= r2.y && mouseY <= r2.y + r2.h){
                         texto_visivel1 = 1;
+                        stop++;
                     }
                 }
 
@@ -388,7 +395,7 @@ int main (int argc, char* args[])
         //renderiza imagem
 
         if(vrfim1){
-            renderizarImagemPorNome(listaimagens, ren, "fundo_menu");
+            renderizarImagemPorNome(listaimagens, ren, "Menu_Principal");
         }
 
         if(vrfim2){
@@ -398,6 +405,10 @@ int main (int argc, char* args[])
         if(vrfim3){
             renderizarImagemPorNome(listaimagens, ren, "planicie");
         }
+
+        if(vrfim4){
+            renderizarImagemPorNome(listaimagens, ren, "Tela_Carregamento");
+}
 
         //renderiza bloco
 
@@ -425,6 +436,12 @@ int main (int argc, char* args[])
         if(texto_visivel2 == 1){
             renderTextAt(ren, estafunc, 0, 500);
         }
+        
+        if(texto_visivel3 == 1){
+            renderTextAt(ren, iniciar, 200, 500);
+            renderTextAt(ren, sair, 500, 500);
+			renderTextAt(ren, titulo, 200, 0);
+}        
 
         SDL_RenderPresent(ren);
     }
