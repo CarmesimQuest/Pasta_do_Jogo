@@ -28,6 +28,7 @@ typedef struct TextTexture{
     SDL_Texture* texture;
     int largura;
     int altura;
+    bool visivel;
 
 }TTR;
 
@@ -105,6 +106,7 @@ typedef struct ObjImage{
 
     SDL_Texture* textura;
     SDL_Rect posicao;
+    bool visivel;
 
 }OBI;
 
@@ -186,7 +188,6 @@ void renderizarImagemPorNome(ListaImagens* lista, SDL_Renderer* renderer, const 
 }
 
 //liberar toda a memoria da lista
-
 void liberarListaImagem(ListaImagens* lista){
 
     Noimagem* atual = lista -> head;
@@ -233,7 +234,7 @@ int main (int argc, char* args[])
 
 
     // Carregar a fonte uma única vez no início
-    TTF_Font* fnt = TTF_OpenFont("minecraft_font.ttf", 12);
+    TTF_Font* fnt = TTF_OpenFont("minecraft_font.ttf", 24);
     SDL_Color corTexto = { 0, 255, 255, 255};
 
     int texto_visivel1 = 0;
@@ -334,6 +335,7 @@ int main (int argc, char* args[])
 
                         vrfim1 = false;
                         vrfim2 = true;
+                        vrfim3 = false;
 
                         blck1_view = false;
                         cfm_click1 = false;
@@ -358,13 +360,14 @@ int main (int argc, char* args[])
                     }
                 }
 
-                //click 3:
+                //click r3:
                 if(cfm_click3 == true){
 
                     if(mouseX >= r3.x && mouseX <= r3.x + r3.w && mouseY >= r3.y && mouseY <= r3.y + r3.h){
                         vrfim3 = true;
                         vrfim2 = false;
                         vrfim1 = false;
+                        buscaImagem(listaimagens, "pantano");
                     }
                 }
             }
