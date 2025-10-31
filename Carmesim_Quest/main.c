@@ -229,6 +229,8 @@ int main (int argc, char* args[])
     adicionarImagem(listaimagens, criarObjetoImagem("pantano_place_holder.png", ren, 0, 0, 800, 500), "pantano");
     adicionarImagem(listaimagens, criarObjetoImagem("Carregamento.png", ren, 0, 0, 800, 600), "Tela_de_Carregamento");
     adicionarImagem(listaimagens, criarObjetoImagem("Vila.png", ren, 0, 0, 800, 600), "Vila");
+    adicionarImagem(listaimagens, criarObjetoImagem("Mapa.png", ren, 0, 0, 800, 600), "Mapa");
+    
     
     // Carregar a fonte uma única vez no início
     TTF_Font* fnt = TTF_OpenFont("minecraft_font.ttf", 24);
@@ -283,6 +285,7 @@ int main (int argc, char* args[])
     bool vrfim3 = false;
     bool vrfim4 = false;
     bool vrfim5 = false;
+    bool vrfim6 = false;
     
     //cria o protagonista
     CHC prtg;
@@ -393,6 +396,22 @@ int main (int argc, char* args[])
                         buscaImagem(listaimagens, "pantano");
                     }
                 }
+                
+                if(mouseX >= 700 && mouseX <= 800 && mouseY >= 567 && mouseY <= 600 && texto_visivel5 == 1){
+                	
+                	texto_visivel5 = 0;
+                	vrfim5 = false;
+                	vrfim6 = true;
+                	
+                		
+                }
+                
+                if(vrfim6 == true && mouseX >= 0 && mouseX <= 400 && mouseY >= 0 && mouseY <= 300){
+                	
+                	vrfim6 = false;
+                	vrfim5 = true;
+                	texto_visivel5 = 1;
+                }
              }
              
              //tela de carregamento
@@ -407,7 +426,9 @@ int main (int argc, char* args[])
             		}
             		
             		aux_carregar = 1;
-            }	
+            }
+            
+            		
         }
 
         else{
@@ -443,7 +464,10 @@ int main (int argc, char* args[])
         if(vrfim5){
             renderizarImagemPorNome(listaimagens, ren, "Vila");
         }
-
+	
+	if(vrfim6){
+            renderizarImagemPorNome(listaimagens, ren, "Mapa");
+        }
 
         //renderiza bloco
 
