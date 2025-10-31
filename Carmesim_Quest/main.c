@@ -22,7 +22,7 @@ typedef struct character{
 }CHC;
 
 
-//fun��es para texto abaixo
+//funções para texto abaixo
 typedef struct TextTexture{
 
     SDL_Texture* texture;
@@ -85,7 +85,7 @@ void freeTextTexture(TTR text){
 }
 
 
-//fun��es para imagens abaixo
+//funções para imagens abaixo
 SDL_Texture* carregarTextura(const char* caminho, SDL_Renderer* renderer){
 
     SDL_Texture* textura = NULL;
@@ -176,7 +176,7 @@ OBI* buscaImagem(ListaImagens* lista, const char* nome){
         }
         atual = atual -> prox;
     }
-    return NULL; //caso n�o encontre
+    return NULL; //caso não encontre
 }
 
 void renderizarImagemPorNome(ListaImagens* lista, SDL_Renderer* renderer, const char* nome){
@@ -217,7 +217,7 @@ int main (int argc, char* args[])
 
     SDL_Renderer* ren = SDL_CreateRenderer(win, -1, SDL_RENDERER_ACCELERATED);
 
-
+    
 
     //cria a lista
     ListaImagens* listaimagens = criarListaImagens();
@@ -228,32 +228,41 @@ int main (int argc, char* args[])
     adicionarImagem(listaimagens, criarObjetoImagem("planicie_place_holder.png", ren, 0, 0, 800, 500), "planicie");
     adicionarImagem(listaimagens, criarObjetoImagem("pantano_place_holder.png", ren, 0, 0, 800, 500), "pantano");
     adicionarImagem(listaimagens, criarObjetoImagem("Carregamento.png", ren, 0, 0, 800, 600), "Tela_de_Carregamento");
-
-    // Carregar a fonte uma �nica vez no in�cio
+    adicionarImagem(listaimagens, criarObjetoImagem("Vila.png", ren, 0, 0, 800, 600), "Vila");
+    
+    // Carregar a fonte uma única vez no início
     TTF_Font* fnt = TTF_OpenFont("minecraft_font.ttf", 24);
     SDL_Color corTexto = { 0, 255, 255, 255};
     SDL_Color ver = {255, 0, 0, 255};
-
-    bool texto_visivel1 = false;
+    SDL_Color gold = {255, 215, 0, 255};
+    SDL_Color yel = {255, 255, 0, 255};
+    
+    int texto_visivel1 = 0;
     TTR hello = CarregaTexto(ren, fnt, "Deu certo", corTexto);
     TTR sdl = CarregaTexto(ren, fnt, "SDL2 com texto", corTexto);
-
-    bool texto_visivel3 = true;
+    
+    int texto_visivel3 = 1; 
     TTR iniciar = CarregaTexto(ren, fnt, "INICIAR", ver);
     TTR sair = CarregaTexto(ren, fnt, "SAIR", ver);
     TTR titulo = CarregaTexto(ren, fnt, "CARMESIM QUEST", ver);
 
-    bool texto_visivel2 = false;
+    int texto_visivel2 = 0;
     TTR estafunc = CarregaTexto(ren, fnt, "O texto esta carregando aqui!!", corTexto);
 
-    bool texto_visivel4 = false;
-    TTR carregando = CarregaTexto(ren, fnt, "Carregando", corTexto);
+    int texto_visivel4 = 0;
+    TTR carregamento = CarregaTexto(ren, fnt, "CARREGANDO", gold);
+
+    int texto_visivel5 = 0;
+    TTR loja = CarregaTexto(ren, fnt, "LOJA", yel);
+    TTR arena = CarregaTexto(ren, fnt, "ARENA", yel);
+    TTR mapa = CarregaTexto(ren, fnt, "MAPA", yel);
 
     //blocos
     SDL_Rect r = { 200, 500, 150, 40 };
     SDL_Rect r2 = { 500, 500, 100, 40 };
     SDL_Rect r3 = { 0, 500, 800, 200};
-
+    SDL_Rect r4 = {700, 500, 100, 100};
+    
     bool blck1_view = true;
     bool cfm_click1 = true;
 
@@ -262,19 +271,19 @@ int main (int argc, char* args[])
 
     bool blck3_view = false;
     bool cfm_click3 = false;
+    
+    bool blck4_view = false;
 
     //bloco do fade
-    SDL_Rect r4 = { 0, 0, 800, 600};
-    bool blck4_view = true;
-    SDL_SetRenderDrawColor(ren, 0, 0, 0, 0);
-    SDL_RenderFillRect(ren, &r4);
 
-    //permite a apari��o da imagem
+
+    //permite a aparição da imagem
     bool vrfim1 = true;
     bool vrfim2 = false;
     bool vrfim3 = false;
     bool vrfim4 = false;
-
+    bool vrfim5 = false;
+    
     //cria o protagonista
     CHC prtg;
     prtg.HP = 20;
@@ -290,8 +299,10 @@ int main (int argc, char* args[])
     int blue = 255;
     int green = 255;
     SDL_Event evt;
+    SDL_Event evt1;
     int clique_comeco = 0;
-
+    int aux_carregar = 0;
+    
     while(stop == 0){
         Uint32 antes = SDL_GetTicks();
 
@@ -323,25 +334,42 @@ int main (int argc, char* args[])
                 stop++;
             }
 
-            // MOVER a verifica��o do clique do mouse para DENTRO do if(isevt)
+            // MOVER a verificação do clique do mouse para DENTRO do if(isevt)
             if(evt.type == SDL_MOUSEBUTTONDOWN){
                 SDL_GetMouseState(&mouseX, &mouseY);
-
+                
                 //click em r
                 if(cfm_click1 == true){
-
+                    
                     if(mouseX >= r.x && mouseX <= r.x + r.w && mouseY >= r.y && mouseY <= r.y + r.h){
+                        vrfim4 = true;
+                        texto_visivel3 = 0;
+			
+                        /*printf("\nX:%d, Y:%d", mouseX, mouseY);
+                        red = rand() % 255;
+                        green = rand() % 255;
+                        blue = rand() % 255;
+
+                        r2.x = rand() % 400;
+                        r2.y = rand() % 400;*/
+
+                        printf("\nposição X r2:%d\n", r2.x);
+                        printf("\nposição Y r2:%d\n", r2.y);
 
                         vrfim1 = false;
-                        vrfim4 = true;
-                        texto_visivel4 = true;
-                        texto_visivel3 = false;
+                        vrfim2 = false;
+                        vrfim3 = false;
+
                         blck1_view = false;
-                        blck2_view = false;
-                        blck3_view = true;
                         cfm_click1 = false;
+
+                        blck2_view = false;
                         cfm_click2 = false;
-                        cfm_click3 = true;
+
+                        blck3_view = false;
+                        cfm_click3 = false;
+
+                        texto_visivel4 = 1;
                     }
                 }
 
@@ -350,7 +378,7 @@ int main (int argc, char* args[])
                 if(cfm_click2 == true){
 
                     if(mouseX >= r2.x && mouseX <= r2.x + r2.w && mouseY >= r2.y && mouseY <= r2.y + r2.h){
-                        texto_visivel1 = true;
+                        texto_visivel1 = 1;
                         stop++;
                     }
                 }
@@ -359,14 +387,27 @@ int main (int argc, char* args[])
                 if(cfm_click3 == true){
 
                     if(mouseX >= r3.x && mouseX <= r3.x + r3.w && mouseY >= r3.y && mouseY <= r3.y + r3.h){
-                        printf("está clicando\n");
-                        vrfim3 = false;
+                        vrfim3 = true;
                         vrfim2 = false;
                         vrfim1 = false;
                         buscaImagem(listaimagens, "pantano");
                     }
                 }
-            }
+             }
+             
+             //tela de carregamento
+            	
+            	if(texto_visivel4 == 1){
+            	
+    			if(aux_carregar > 0 && !(SDL_WaitEventTimeout(&evt1, 3000))){
+            			vrfim4 = false;
+            			vrfim5 = true;
+            			texto_visivel5 = 1;
+            			texto_visivel4 = 0;
+            		}
+            		
+            		aux_carregar = 1;
+            }	
         }
 
         else{
@@ -377,27 +418,32 @@ int main (int argc, char* args[])
             printf("\nencostou\n");
         }
 
-        //renderiza��o abaixo tela
+        //renderização abaixo tela
         SDL_SetRenderDrawColor(ren, red, green, blue, 0x00);
         SDL_RenderClear(ren);
 
         //renderiza imagem
 
-        if(vrfim1 == true){
+        if(vrfim1){
             renderizarImagemPorNome(listaimagens, ren, "Menu_Principal");
         }
 
-        if(vrfim2 == true){
+        if(vrfim2){
             renderizarImagemPorNome(listaimagens, ren, "vila");
         }
 
-        if(vrfim3 == true){
+        if(vrfim3){
             renderizarImagemPorNome(listaimagens, ren, "planicie");
         }
 
-        if(vrfim4 == true){
+        if(vrfim4){
             renderizarImagemPorNome(listaimagens, ren, "Tela_de_Carregamento");
         }
+        
+        if(vrfim5){
+            renderizarImagemPorNome(listaimagens, ren, "Vila");
+        }
+
 
         //renderiza bloco
 
@@ -415,27 +461,38 @@ int main (int argc, char* args[])
             SDL_SetRenderDrawColor(ren, 0, 0, 0, 0x00);
             SDL_RenderFillRect(ren, &r3);
         }
+        
+        if(blck4_view == true){
+            SDL_SetRenderDrawColor(ren, 0, 0, 0, 0xFF);
+            SDL_RenderFillRect(ren, &r4);
+        }
+
 
         //renderizando texto
-        if(texto_visivel1 == true){
+        if(texto_visivel1 == 1){
             renderTextAt(ren, hello, 50, 50);
             renderTextAt(ren, sdl, 50, 100);
         }
 
-        if(texto_visivel2 == true){
+        if(texto_visivel2 == 1){
             renderTextAt(ren, estafunc, 0, 500);
         }
-
-        if(texto_visivel3 == true){
+        
+        if(texto_visivel3 == 1){
             renderTextAt(ren, iniciar, 200, 500);
             renderTextAt(ren, sair, 500, 500);
-			renderTextAt(ren, titulo, 200, 0);
+	    renderTextAt(ren, titulo, 200, 0);
         }
 
-        if(texto_visivel4 == true){
-
-            renderTextAt(ren, carregando, 200, 0);
-        }
+        if(texto_visivel4 == 1){
+            renderTextAt(ren, carregamento, 300, 10);
+        } 
+        
+        if(texto_visivel5 == 1){
+            renderTextAt(ren, loja, 710, 505);
+            renderTextAt(ren, arena, 710, 535);
+	    renderTextAt(ren, mapa, 710, 565);
+        }      
 
         SDL_RenderPresent(ren);
     }
