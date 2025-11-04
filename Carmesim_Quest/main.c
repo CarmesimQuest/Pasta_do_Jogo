@@ -5,7 +5,6 @@
 #include <stdlib.h>
 #include <time.h>
 #include <stdbool.h>
-#include <assert.h>
 #include <string.h>
 
 //estrutura dos personagens
@@ -61,15 +60,6 @@ TTR CarregaTexto(SDL_Renderer* renderer, TTF_Font* font, const char* text, SDL_C
 
     SDL_FreeSurface(surface);
     return result;
-}
-
-void renderText(SDL_Renderer* renderer, TTR text){
-    if(!text.texture){
-        return;
-    }
-
-    SDL_Rect dest = {0, 0, text.largura, text.altura};
-    SDL_RenderCopy(renderer, text.texture, NULL, &dest);
 }
 
 void renderTextAt(SDL_Renderer* renderer, TTR text, int x, int y){
@@ -233,7 +223,7 @@ void ataqueInimigo(CHC* jogador, INI* inimigo){
 void iniciarBatalha(CHC* jogador){
     em_batalha = true;
     turno_atual = 0;
-    inicializarInimigo(&inimigo_atual, "Guerreiro da Arena", 30, 8);
+    inicializarInimigo(&inimigo_atual, "Guerreiro da Arena", 10, 2);
     strcpy(buffer_mensagem, "Batalha iniciada! Escolha uma acao.");
 }
 
@@ -289,7 +279,7 @@ int main (int argc, char* args[])
     TTR estafunc = CarregaTexto(ren, fnt, "O texto esta carregando aqui!!", corTexto);
 
     int texto_visivel4 = 0;
-    TTR carregamento = CarregaTexto(ren, fnt, "CARREGando", gold);
+    TTR carregamento = CarregaTexto(ren, fnt, "CARREGANDO", gold);
 
     int texto_visivel5 = 0;
     TTR loja = CarregaTexto(ren, fnt, "LOJA", yel);
@@ -316,10 +306,10 @@ int main (int argc, char* args[])
     SDL_Rect btn_fugir = {600, 550, 150, 40};
 
     //verifica aparição de blocos
-    bool blck1_view = true;
+    bool blck1_view = false;
     bool cfm_click1 = true;
 
-    bool blck2_view = true;
+    bool blck2_view = false;
     bool cfm_click2 = true;
 
     bool blck3_view = false;
@@ -393,7 +383,6 @@ int main (int argc, char* args[])
                 stop++;
             }
 
-            // MOVER a verificação do clique do mouse para DENTRO do if(isevt)
             if(evt.type == SDL_MOUSEBUTTONDOWN){
                 SDL_GetMouseState(&mouseX, &mouseY);
 
@@ -429,7 +418,6 @@ int main (int argc, char* args[])
                             if(!inimigo_atual.vivo){
                                 strcpy(buffer_mensagem, "Vitoria! Inimigo derrotado!");
                                 //volta para a vila após vencer
-                                SDL_Delay(2000);
                                 em_batalha = false;
                                 vrfbtt = false;
                                 vrfim5 = true;
@@ -443,7 +431,6 @@ int main (int argc, char* args[])
                             else{
                                 strcpy(buffer_mensagem, "Derrota! Voce foi morto!");
                                 //fecha jogo se morrer
-                                SDL_Delay(2000);
                                 stop++;
                             }
 
@@ -571,6 +558,7 @@ int main (int argc, char* args[])
             }
             aux_carregar = 1;
         }
+
         else{
             espera = 500;
         }
@@ -686,7 +674,7 @@ int main (int argc, char* args[])
         if(texto_visivel3 == 1){
             renderTextAt(ren, iniciar, 200, 500);
             renderTextAt(ren, sair, 500, 500);
-            renderTextAt(ren, titulo, 200, 0);
+            renderTextAt(ren, titulo, 280, 10);
         }
 
         if(texto_visivel4 == 1){
