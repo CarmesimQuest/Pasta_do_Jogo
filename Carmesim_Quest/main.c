@@ -28,13 +28,13 @@ typedef struct inimigo{
     bool vivo;
 }INI;
 
-// Variáveis globais para batalha
+// VariÃ¡veis globais para batalha
 bool em_batalha = false;
 INI inimigo_atual;
 int turno_atual = 0;
 char buffer_mensagem[200];
 
-//funções para texto abaixo
+//funÃ§Ãµes para texto abaixo
 typedef struct TextTexture{
     SDL_Texture* texture;
     int largura;
@@ -77,7 +77,7 @@ void freeTextTexture(TTR text){
     }
 }
 
-//funções para imagens abaixo
+//funÃ§Ãµes para imagens abaixo
 SDL_Texture* carregarTextura(const char* caminho, SDL_Renderer* renderer){
     SDL_Texture* textura = NULL;
     SDL_Surface* superficie = IMG_Load(caminho);
@@ -153,7 +153,7 @@ OBI* buscaImagem(ListaImagens* lista, const char* nome){
         }
         atual = atual -> prox;
     }
-    return NULL; //caso não encontre
+    return NULL; //caso nÃ£o encontre
 }
 
 void renderizarImagemPorNome(ListaImagens* lista, SDL_Renderer* renderer, const char* nome){
@@ -185,7 +185,7 @@ void inicializarInimigo(INI* inimigo, const char* nome, int hp, int str){
     inimigo -> vivo = true;
 }
 
-//função para ataque do jogador
+//funÃ§Ã£o para ataque do jogador
 void ataqueJogador(CHC* jogador, INI* inimigo){
     int dano = jogador -> STR + (rand() % 3);
     inimigo -> HP -= dano;
@@ -202,7 +202,7 @@ void ataqueJogador(CHC* jogador, INI* inimigo){
     }
 }
 
-// funçao para ataque do inimigo
+// funÃ§ao para ataque do inimigo
 void ataqueInimigo(CHC* jogador, INI* inimigo){
     int dano = inimigo -> STR + (rand() % 3);
     jogador -> HP -= dano;
@@ -219,7 +219,7 @@ void ataqueInimigo(CHC* jogador, INI* inimigo){
     }
 }
 
-//função para iniciar a batalha
+//funÃ§Ã£o para iniciar a batalha
 void iniciarBatalha(CHC* jogador){
     em_batalha = true;
     turno_atual = 0;
@@ -227,7 +227,7 @@ void iniciarBatalha(CHC* jogador){
     strcpy(buffer_mensagem, "Batalha iniciada! Escolha uma acao.");
 }
 
-//FUNÇÃO MAIN
+//FUNÃ‡ÃƒO MAIN
 int main (int argc, char* args[])
 {
     //adicionado para fins de aleatoriedade
@@ -250,15 +250,16 @@ int main (int argc, char* args[])
     //adiciona na lista
     adicionarImagem(listaimagens, criarObjetoImagem("Castle.png", ren, 0, 0, 800, 600), "Menu_Principal");
     adicionarImagem(listaimagens, criarObjetoImagem("vila_place_holder.png", ren, 0, 0, 800, 500), "vila");
-    adicionarImagem(listaimagens, criarObjetoImagem("planicie_place_holder.png", ren, 0, 0, 800, 500), "planicie");
-    adicionarImagem(listaimagens, criarObjetoImagem("pantano_place_holder.png", ren, 0, 0, 800, 500), "pantano");
+    adicionarImagem(listaimagens, criarObjetoImagem("Planicie.png", ren, 0, 0, 800, 600), "Planicie");
+    adicionarImagem(listaimagens, criarObjetoImagem("Pantano.png", ren, 0, 0, 800, 600), "Pantano");
     adicionarImagem(listaimagens, criarObjetoImagem("Carregamento.png", ren, 0, 0, 800, 600), "Tela_de_Carregamento");
     adicionarImagem(listaimagens, criarObjetoImagem("Vila.png", ren, 0, 0, 800, 600), "Vila");
     adicionarImagem(listaimagens, criarObjetoImagem("Mapa.png", ren, 0, 0, 800, 600), "Mapa");
     adicionarImagem(listaimagens, criarObjetoImagem("arena.png", ren, 0, 0, 800, 600), "Arena");
     adicionarImagem(listaimagens, criarObjetoImagem("guerreiro_basico_arena.png", ren, 300, 150, 200, 300), "guerreiro_da_Arena");
-
-    // Carregar a fonte uma única vez no início
+    adicionarImagem(listaimagens, criarObjetoImagem("Terreo.png", ren, 0, 0, 800, 600), "Terreo");
+    
+    // Carregar a fonte uma Ãºnica vez no inÃ­cio
     TTF_Font* fnt = TTF_OpenFont("minecraft_font.ttf", 24);
     SDL_Color corTexto = { 0, 255, 255, 255};
     SDL_Color ver = {255, 0, 0, 255};
@@ -289,23 +290,40 @@ int main (int argc, char* args[])
     TTR atacar_text = CarregaTexto(ren, fnt, "ATACAR", branco);
     TTR bolsa_text = CarregaTexto(ren, fnt, "BOLSA", branco);
     TTR fugir_text = CarregaTexto(ren, fnt, "FUGIR", branco);
-
+    
+    int texto_visivel6 = 0;
+    TTR regioes = CarregaTexto(ren, fnt, "REGIOES", branco);
+    TTR mapa_b = CarregaTexto(ren, fnt, "MAPA", branco);
+    
+    int texto_visivel7 = 0;
+    TTR norte = CarregaTexto(ren, fnt, "NORTE", branco);
+    TTR sul = CarregaTexto(ren, fnt, "SUL", branco);
+    TTR leste = CarregaTexto(ren, fnt, "LESTE", branco);
+    TTR oeste = CarregaTexto(ren, fnt, "OESTE", branco);
+    
+    int texto_visivel8 = 0;
+    TTR primeiro_andar = CarregaTexto(ren, fnt, "PRIMEIRO ANDAR", branco);
+    TTR segundo_andar = CarregaTexto(ren, fnt, "SEGUNDO ANDAR", branco);
+    TTR sala_rei = CarregaTexto(ren, fnt, "SALA DO REI", branco);
+    
     //blocos
     SDL_Rect r = { 200, 500, 150, 40 };
     SDL_Rect r2 = { 500, 500, 100, 40 };
     SDL_Rect r3 = { 0, 500, 800, 200};
     SDL_Rect r4 = {700, 500, 100, 100};
+    SDL_Rect r5 = {640, 530, 160, 70};
+    SDL_Rect r6 = {540, 470, 260, 130};
     SDL_Rect rpb = { 600, 400, 100, 100};
 
-    //blocos invisiveis para botões
+    //blocos invisiveis para botÃµes
     SDL_Rect ri1 = { 710, 545, 50, 20 };
 
-    //blocos dos botões
+    //blocos dos botÃµes
     SDL_Rect btn_atacar = {600, 450, 150, 40};
     SDL_Rect btn_bolsa = {600, 500, 150, 40};
     SDL_Rect btn_fugir = {600, 550, 150, 40};
 
-    //verifica aparição de blocos
+    //verifica apariÃ§Ã£o de blocos
     bool blck1_view = false;
     bool cfm_click1 = true;
 
@@ -316,19 +334,26 @@ int main (int argc, char* args[])
     bool cfm_click3 = false;
 
     bool blck4_view = false;
+    
+    bool blck5_view = false;
+    
+    bool blck6_view = false;
 
     bool blck_ri1_view = false;
     bool cfm_click_ri1 = false;
 
-    //permite a aparição da imagem
+    //permite a apariÃ§Ã£o da imagem
     bool vrfim1 = true;
     bool vrfim2 = false;
     bool vrfim3 = false;
     bool vrfim4 = false;
     bool vrfim5 = false;
     bool vrfim6 = false;
+    bool vrfim7 = false;
+    bool vrfim8 = false;
+    bool vrfim9 = false;
     bool vrfbtt = false;
-
+    
     //cria o protagonista
     CHC prtg;
     prtg.HP = 20;
@@ -337,7 +362,7 @@ int main (int argc, char* args[])
     prtg.DEX = 10;
     prtg.vivo = true;
 
-    // Variável para mensagem de batalha
+    // VariÃ¡vel para mensagem de batalha
     TTR mensagem_batalha;
 
     //gerais
@@ -406,7 +431,7 @@ int main (int argc, char* args[])
                         freeTextTexture(mensagem_batalha);
                         mensagem_batalha = CarregaTexto(ren, fnt, buffer_mensagem, corTexto);
 
-                        //verifica se inimigo ainda está vivo para contra-atacar
+                        //verifica se inimigo ainda estÃ¡ vivo para contra-atacar
                         if(inimigo_atual.vivo && prtg.vivo){
                             ataqueInimigo(&prtg, &inimigo_atual);
                             freeTextTexture(mensagem_batalha);
@@ -417,12 +442,12 @@ int main (int argc, char* args[])
                         if(!inimigo_atual.vivo || !prtg.vivo){
                             if(!inimigo_atual.vivo){
                                 strcpy(buffer_mensagem, "Vitoria! Inimigo derrotado!");
-                                //volta para a vila após vencer
+                                //volta para a vila apÃ³s vencer
                                 em_batalha = false;
                                 vrfbtt = false;
                                 vrfim5 = true;
 
-                                //reativo o botão da arena na vila
+                                //reativo o botÃ£o da arena na vila
                                 cfm_click_ri1 = true;
                                 blck_ri1_view = true;
                                 texto_visivel5 = 1;
@@ -454,7 +479,7 @@ int main (int argc, char* args[])
                         vrfbtt = false;
                         vrfim5 = true;
 
-                        //reativo o botão da arena na vila
+                        //reativo o botÃ£o da arena na vila
                         cfm_click_ri1 = true;
                         blck_ri1_view = true;
                         texto_visivel5 = 1;
@@ -467,8 +492,8 @@ int main (int argc, char* args[])
                         vrfim4 = true;
                         texto_visivel3 = 0;
 
-                        printf("\nposição X r2:%d\n", r2.x);
-                        printf("\nposição Y r2:%d\n", r2.y);
+                        printf("\nposiÃ§Ã£o X r2:%d\n", r2.x);
+                        printf("\nposiÃ§Ã£o Y r2:%d\n", r2.y);
 
                         vrfim1 = false;
                         vrfim2 = false;
@@ -511,11 +536,50 @@ int main (int argc, char* args[])
                 	vrfim6 = true;
                 }
 
-                if(vrfim6 == true && mouseX >= 0 && mouseX <= 400 && mouseY >= 0 && mouseY <= 300){
+                if(vrfim6 == true && mouseX >= 0 && mouseX <= 399 && mouseY >= 0 && mouseY <= 299){
                 	vrfim6 = false;
                 	vrfim5 = true;
                 	texto_visivel5 = 1;
                 }
+                
+                if(vrfim6 == true && mouseX >= 0 && mouseX <= 399 && mouseY >= 301 && mouseY <= 600){
+                	vrfim6 = false;
+                	vrfim7 = true;
+                	texto_visivel6 = 1;
+                	blck5_view = true;
+                	
+                }
+                
+                if(vrfim6 == true && mouseX >= 401 && mouseX <= 800 && mouseY >= 0 && mouseY <= 299){
+                	vrfim6 = false;
+                	vrfim8 = true;
+                	texto_visivel6 = 1;
+                	blck5_view = true;
+                }
+                
+                if(vrfim6 == true && mouseX >= 401 && mouseX <= 800 && mouseY >= 301 && mouseY <= 600){
+                	vrfim6 = false;
+                	vrfim9 = true;
+                	texto_visivel8 = 1;
+                	blck6_view = true;
+                }
+                
+                if(texto_visivel6 == 1 && mouseX >= 640 && mouseX <= 800 && mouseY >= 565 && mouseY <= 600){
+                	texto_visivel6 = 0;
+                	vrfim7 = false;
+                	vrfim8 = false;
+                	vrfim6 = true;
+                	blck5_view = false;
+                }
+                
+                if(texto_visivel8 == 1 && mouseX >= 540 && mouseX <= 800 && mouseY >= 565 && mouseY <= 600){
+                	texto_visivel8 = 0;
+                	vrfim9 = false;
+                	vrfim6 = true;
+                	blck6_view = false;
+                }
+                
+                
 
                 //click em ri1
                 if(cfm_click_ri1 == true){
@@ -567,7 +631,7 @@ int main (int argc, char* args[])
             printf("\nencostou\n");
         }
 
-        //renderização abaixo tela
+        //renderizaÃ§Ã£o abaixo tela
         SDL_SetRenderDrawColor(ren, red, green, blue, 0x00);
         SDL_RenderClear(ren);
 
@@ -595,12 +659,24 @@ int main (int argc, char* args[])
         if(vrfim6){
             renderizarImagemPorNome(listaimagens, ren, "Mapa");
         }
+        
+        if(vrfim7){
+            renderizarImagemPorNome(listaimagens, ren, "Pantano");
+        }
+        
+        if(vrfim8){
+            renderizarImagemPorNome(listaimagens, ren, "Planicie");
+        }
+        
+        if(vrfim9){
+            renderizarImagemPorNome(listaimagens, ren, "Terreo");
+        }
 
         if(vrfbtt){
             renderizarImagemPorNome(listaimagens, ren, "Arena");
             renderizarImagemPorNome(listaimagens, ren, "guerreiro_da_Arena");
 
-            //renderização da batalha
+            //renderizaÃ§Ã£o da batalha
             if(em_batalha){
                 //renderiza mensagem da batalha
                 int x_msg = (800 - mensagem_batalha.largura) / 2;
@@ -655,6 +731,16 @@ int main (int argc, char* args[])
             SDL_SetRenderDrawColor(ren, 0, 0, 0, 0xFF);
             SDL_RenderFillRect(ren, &r4);
         }
+        
+        if(blck5_view == true){
+            SDL_SetRenderDrawColor(ren, 0, 0, 0, 0xFF);
+            SDL_RenderFillRect(ren, &r5);
+        }
+        
+        if(blck6_view == true){
+            SDL_SetRenderDrawColor(ren, 0, 0, 0, 0xFF);
+            SDL_RenderFillRect(ren, &r6);
+        }
 
         if(blck_ri1_view == true){
             SDL_SetRenderDrawColor(ren, 0, 0, 0, 255);
@@ -685,6 +771,18 @@ int main (int argc, char* args[])
             renderTextAt(ren, loja, 710, 505);
             renderTextAt(ren, arena_text, 710, 535);
             renderTextAt(ren, mapa, 710, 565);
+        }
+        
+        if(texto_visivel6 == 1){
+            renderTextAt(ren, regioes, 660, 535);
+            renderTextAt(ren, mapa_b, 660, 565);
+        }
+        
+        if(texto_visivel8 == 1){
+            renderTextAt(ren, primeiro_andar, 550, 475);
+            renderTextAt(ren, segundo_andar, 550, 505);
+            renderTextAt(ren, sala_rei, 550, 535);
+            renderTextAt(ren, mapa_b, 550, 565);
         }
 
         SDL_RenderPresent(ren);
