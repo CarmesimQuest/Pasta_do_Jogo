@@ -28,13 +28,13 @@ typedef struct inimigo{
     bool vivo;
 }INI;
 
-// Variáveis globais para batalha
+// VariÃ¡veis globais para batalha
 bool em_batalha = false;
 INI inimigo_atual;
 int turno_atual = 0;
 char buffer_mensagem[200];
 
-//funções para texto abaixo
+//funÃ§Ãµes para texto abaixo
 typedef struct TextTexture{
     SDL_Texture* texture;
     int largura;
@@ -77,7 +77,7 @@ void freeTextTexture(TTR text){
     }
 }
 
-//funções para imagens abaixo
+//funÃ§Ãµes para imagens abaixo
 SDL_Texture* carregarTextura(const char* caminho, SDL_Renderer* renderer){
     SDL_Texture* textura = NULL;
     SDL_Surface* superficie = IMG_Load(caminho);
@@ -153,7 +153,7 @@ OBI* buscaImagem(ListaImagens* lista, const char* nome){
         }
         atual = atual -> prox;
     }
-    return NULL; //caso não encontre
+    return NULL; //caso nÃ£o encontre
 }
 
 void renderizarImagemPorNome(ListaImagens* lista, SDL_Renderer* renderer, const char* nome){
@@ -175,7 +175,7 @@ void definirVisibilidadeImagem(ListaImagens* lista, const char* nome, bool visiv
         }
         atual = atual -> prox;
     }
-    printf("Imagem '%s' não encontrada para definir visibilidade.\n", nome);
+    printf("Imagem '%s' nÃ£o encontrada para definir visibilidade.\n", nome);
 }
 
 void renderizarImagensVisiveis(ListaImagens* lista, SDL_Renderer* renderer){
@@ -222,7 +222,7 @@ void inicializarInimigo(INI* inimigo, const char* nome, int hp, int str){
     inimigo -> vivo = true;
 }
 
-//função para ataque do jogador
+//funÃ§Ã£o para ataque do jogador
 void ataqueJogador(CHC* jogador, INI* inimigo){
     int dano = jogador -> STR + (rand() % 3);
     inimigo -> HP -= dano;
@@ -239,7 +239,7 @@ void ataqueJogador(CHC* jogador, INI* inimigo){
     }
 }
 
-// funçao para ataque do inimigo
+// funÃ§ao para ataque do inimigo
 void ataqueInimigo(CHC* jogador, INI* inimigo){
     int dano = inimigo -> STR + (rand() % 3);
     jogador -> HP -= dano;
@@ -256,7 +256,7 @@ void ataqueInimigo(CHC* jogador, INI* inimigo){
     }
 }
 
-//função para iniciar a batalha
+//funÃ§Ã£o para iniciar a batalha
 void iniciarBatalha(CHC* jogador){
     em_batalha = true;
     turno_atual = 0;
@@ -264,7 +264,7 @@ void iniciarBatalha(CHC* jogador){
     strcpy(buffer_mensagem, "Batalha iniciada! Escolha uma acao.");
 }
 
-//FUNÇÃO MAIN
+//FUNÃ‡ÃƒO MAIN
 int main (int argc, char* args[])
 {
     //adicionado para fins de aleatoriedade
@@ -296,6 +296,8 @@ int main (int argc, char* args[])
     adicionarImagem(listaimagens, criarObjetoImagem("guerreiro_basico_arena.png", ren, 300, 150, 200, 300), "guerreiro_da_Arena");
     adicionarImagem(listaimagens, criarObjetoImagem("Terreo.png", ren, 0, 0, 800, 600), "Terreo");
     adicionarImagem(listaimagens, criarObjetoImagem("Direcoes.png", ren, 0, 0, 800, 600), "Direcoes");
+    adicionarImagem(listaimagens, criarObjetoImagem("DirecoesPantano.png", ren, 0, 0, 800, 600), "Direcoes_Pantano");
+    adicionarImagem(listaimagens, criarObjetoImagem("DirecoesPlanicie.png", ren, 0, 0, 800, 600), "Direcoes_Planicie");
     adicionarImagem(listaimagens, criarObjetoImagem("PrimeiroAndar.png", ren, 0, 0, 800, 600), "PrimeiroAndar");
     adicionarImagem(listaimagens, criarObjetoImagem("SegundoAndar.png", ren, 0, 0, 800, 600), "SegundoAndar");
     adicionarImagem(listaimagens, criarObjetoImagem("SalaRei.png", ren, 0, 0, 800, 600), "SalaRei");
@@ -303,7 +305,7 @@ int main (int argc, char* args[])
     esconderTodasImagens(listaimagens);
     definirVisibilidadeImagem(listaimagens, "Menu_Principal", true);
 
-    // Carregar a fonte uma única vez no início
+    // Carregar a fonte uma Ãºnica vez no inÃ­cio
     TTF_Font* fnt = TTF_OpenFont("minecraft_font.ttf", 24);
     SDL_Color corTexto = { 0, 255, 255, 255};
     SDL_Color ver = {255, 0, 0, 255};
@@ -339,12 +341,6 @@ int main (int argc, char* args[])
     TTR regioes = CarregaTexto(ren, fnt, "REGIOES", branco);
     TTR mapa_b = CarregaTexto(ren, fnt, "MAPA", branco);
 
-    int texto_visivel7 = 0;
-    TTR norte = CarregaTexto(ren, fnt, "NORTE", branco);
-    TTR sul = CarregaTexto(ren, fnt, "SUL", branco);
-    TTR leste = CarregaTexto(ren, fnt, "LESTE", branco);
-    TTR oeste = CarregaTexto(ren, fnt, "OESTE", branco);
-
     int texto_visivel8 = 0;
     TTR primeiro_andar = CarregaTexto(ren, fnt, "PRIMEIRO ANDAR", branco);
     TTR segundo_andar = CarregaTexto(ren, fnt, "SEGUNDO ANDAR", branco);
@@ -352,7 +348,11 @@ int main (int argc, char* args[])
 
     int texto_visivel9 = 0;
     TTR terreo = CarregaTexto(ren, fnt, "TERREO", branco);
-
+	
+    int texto_visivel10 = 0;
+    
+    int texto_visivel11 = 0;	
+ 
     //blocos
     SDL_Rect r = { 200, 500, 150, 40 };
     SDL_Rect r2 = { 500, 500, 100, 40 };
@@ -362,15 +362,15 @@ int main (int argc, char* args[])
     SDL_Rect r6 = {540, 470, 260, 130};
     SDL_Rect rpb = { 600, 400, 100, 100};
 
-    //blocos invisiveis para botões
+    //blocos invisiveis para botÃµes
     SDL_Rect ri1 = { 710, 545, 50, 20 };
 
-    //blocos dos botões
+    //blocos dos botÃµes
     SDL_Rect btn_atacar = {600, 450, 150, 40};
     SDL_Rect btn_bolsa = {600, 500, 150, 40};
     SDL_Rect btn_fugir = {600, 550, 150, 40};
 
-    //verifica aparição de blocos
+    //verifica apariÃ§Ã£o de blocos
     bool blck1_view = false;
     bool cfm_click1 = true;
 
@@ -398,14 +398,23 @@ int main (int argc, char* args[])
         PANTANO,
         PLANICIE,
         TERREO,
-        DIRECOES,
+        DIRECOES_PANTANO,
+        NORTE_PANTANO,
+        SUL_PANTANO,
+        LESTE_PANTANO,
+        OESTE_PANTANO,
+        NORTE_PLANICIE,
+        SUL_PLANICIE,
+        LESTE_PLANICIE,
+        OESTE_PLANICIE,
+        DIRECOES_PLANICIE,
         PRIMEIRO_ANDAR,
         SEGUNDO_ANDAR,
         SALA_REI,
         ARENA
     };
 
-    EstadoJogo estado_atual = MENU_PRINCIPAL;
+    enum EstadoJogo estado_atual = MENU_PRINCIPAL;
 
     //cria o protagonista
     CHC prtg;
@@ -415,7 +424,7 @@ int main (int argc, char* args[])
     prtg.DEX = 10;
     prtg.vivo = true;
 
-    // Variável para mensagem de batalha
+    // VariÃ¡vel para mensagem de batalha
     TTR mensagem_batalha;
 
     //gerais
@@ -484,7 +493,7 @@ int main (int argc, char* args[])
                         freeTextTexture(mensagem_batalha);
                         mensagem_batalha = CarregaTexto(ren, fnt, buffer_mensagem, corTexto);
 
-                        //verifica se inimigo ainda está vivo para contra-atacar
+                        //verifica se inimigo ainda estÃ¡ vivo para contra-atacar
                         if(inimigo_atual.vivo && prtg.vivo){
                             ataqueInimigo(&prtg, &inimigo_atual);
                             freeTextTexture(mensagem_batalha);
@@ -496,7 +505,7 @@ int main (int argc, char* args[])
                             if(!inimigo_atual.vivo){
                                 strcpy(buffer_mensagem, "Vitoria! Inimigo derrotado!");
 
-                                //volta para a vila após vencer
+                                //volta para a vila apÃ³s vencer
                                 em_batalha = false;
 
                                 estado_atual = VILA;
@@ -505,7 +514,7 @@ int main (int argc, char* args[])
                                 definirVisibilidadeImagem(listaimagens, "Vila", true);
 
 
-                                //reativo o botão da arena na vila
+                                //reativo o botÃ£o da arena na vila
                                 cfm_click_ri1 = true;
                                 blck_ri1_view = true;
                                 texto_visivel5 = 1;
@@ -542,7 +551,7 @@ int main (int argc, char* args[])
                         definirVisibilidadeImagem(listaimagens, "Vila", true);
 
 
-                        //reativo o botão da arena na vila
+                        //reativo o botÃ£o da arena na vila
                         cfm_click_ri1 = true;
                         blck_ri1_view = true;
                         texto_visivel5 = 1;
@@ -557,8 +566,8 @@ int main (int argc, char* args[])
 
                         texto_visivel3 = 0;
 
-                        printf("\nposição X r2:%d\n", r2.x);
-                        printf("\nposição Y r2:%d\n", r2.y);
+                        printf("\nposiÃ§Ã£o X r2:%d\n", r2.x);
+                        printf("\nposiÃ§Ã£o Y r2:%d\n", r2.y);
 
                         definirVisibilidadeImagem(listaimagens, "Menu_Principal", false);
                         definirVisibilidadeImagem(listaimagens, "Tela_de_Carregamento", true);
@@ -606,50 +615,55 @@ int main (int argc, char* args[])
                 	definirVisibilidadeImagem(listaimagens, "Vila", false);
                 	definirVisibilidadeImagem(listaimagens, "Mapa", true);
                 }
+			
+			//ir para vila
+                	if(estado_atual == MAPA && mouseX >= 0 && mouseX <= 399 && mouseY >= 0 && mouseY <= 299){
 
-                if(estado_atual == MAPA && mouseX >= 0 && mouseX <= 399 && mouseY >= 0 && mouseY <= 299){
+                    		estado_atual = VILA;
 
-                    estado_atual = VILA;
+                		definirVisibilidadeImagem(listaimagens, "Mapa", false);
+                    		definirVisibilidadeImagem(listaimagens, "Vila", true);
 
-                	definirVisibilidadeImagem(listaimagens, "Mapa", false);
-                    definirVisibilidadeImagem(listaimagens, "Vila", true);
+                		texto_visivel5 = 1;
+                	}
+			
+			//ir para pantano
+                	if(estado_atual == MAPA && mouseX >= 0 && mouseX <= 399 && mouseY >= 301 && mouseY <= 600){
 
-                	texto_visivel5 = 1;
-                }
+                    		estado_atual = PANTANO;
 
-                if(estado_atual == MAPA && mouseX >= 0 && mouseX <= 399 && mouseY >= 301 && mouseY <= 600){
+                    		definirVisibilidadeImagem(listaimagens, "Mapa", false);
+                    		definirVisibilidadeImagem(listaimagens, "Pantano", true);
 
-                    estado_atual = PANTANO;
+                		texto_visivel6 = 1;
+                		blck5_view = true;
 
-                    definirVisibilidadeImagem(listaimagens, "Mapa", false);
-                    definirVisibilidadeImagem(listaimagens, "Pantano", true);
+                	}
 
-                	texto_visivel6 = 1;
-                	blck5_view = true;
+			//ir para planicie
+                	if(estado_atual == MAPA && mouseX >= 401 && mouseX <= 800 && mouseY >= 0 && mouseY <= 299){
 
-                }
+                    		estado_atual = PLANICIE;
 
-                if(estado_atual == MAPA && mouseX >= 401 && mouseX <= 800 && mouseY >= 0 && mouseY <= 299){
+                    		definirVisibilidadeImagem(listaimagens, "Mapa", false);
+                    		definirVisibilidadeImagem(listaimagens, "Planicie", true);
 
-                    estado_atual = PLANICIE;
+                		texto_visivel6 = 1;
+                		blck5_view = true;
+                	}
+			
+			//ir para terreo
+                	if(estado_atual == MAPA && mouseX >= 401 && mouseX <= 800 && mouseY >= 301 && mouseY <= 600){
 
-                    definirVisibilidadeImagem(listaimagens, "Mapa", false);
-                    definirVisibilidadeImagem(listaimagens, "Planicie", true);
+                		estado_atual = TERREO;
 
-                	texto_visivel6 = 1;
-                	blck5_view = true;
-                }
+                		definirVisibilidadeImagem(listaimagens, "Mapa", false);
+                		definirVisibilidadeImagem(listaimagens, "Terreo", true);
 
-                if(estado_atual == MAPA && mouseX >= 401 && mouseX <= 800 && mouseY >= 301 && mouseY <= 600){
-
-                	estado_atual = TERREO;
-
-                	definirVisibilidadeImagem(listaimagens, "Mapa", false);
-                	definirVisibilidadeImagem(listaimagens, "Terreo", true);
-
-                	texto_visivel8 = 1;
-                	blck6_view = true;
-                }
+                		texto_visivel8 = 1;
+                		blck6_view = true;
+                	}
+                
 
                 if((estado_atual == PANTANO || estado_atual == PLANICIE) && texto_visivel6 == 1 && mouseX >= 640 && mouseX <= 800 && mouseY >= 566 && mouseY <= 600){
                 	texto_visivel6 = 0;
@@ -662,54 +676,303 @@ int main (int argc, char* args[])
                 	blck5_view = false;
                 }
 
-                if((estado_atual == PANTANO || estado_atual == PLANICIE) && texto_visivel6 == 1 && mouseX >= 640 && mouseX <= 800 && mouseY >= 530 && mouseY <= 564){
+                if(estado_atual == PANTANO && texto_visivel6 == 1 && mouseX >= 640 && mouseX <= 800 && mouseY >= 530 && mouseY <= 564){
                 	texto_visivel6 = 0;
 
-                    estado_atual = DIRECOES;
+                    estado_atual = DIRECOES_PANTANO;
                     definirVisibilidadeImagem(listaimagens, "Pantano", false);
+                    definirVisibilidadeImagem(listaimagens, "Direcoes", true);
+                	blck5_view = false;
+                }
+                
+                if(estado_atual == PLANICIE && texto_visivel6 == 1 && mouseX >= 640 && mouseX <= 800 && mouseY >= 530 && mouseY <= 564){
+                	texto_visivel6 = 0;
+
+                    estado_atual = DIRECOES_PLANICIE;
                     definirVisibilidadeImagem(listaimagens, "Planicie", false);
                     definirVisibilidadeImagem(listaimagens, "Direcoes", true);
 
                 	blck5_view = false;
+                
+              	}
+              	
+              	//no terreo
+              	if(estado_atual == TERREO){
+              	
+			//clique no mapa
+               		if(mouseX >= 540 && mouseX <= 800 && mouseY >= 565 && mouseY <= 590){
+                		texto_visivel8 = 0;
+
+                    		estado_atual = MAPA;
+                    		definirVisibilidadeImagem(listaimagens, "Terreo", false);
+                    		definirVisibilidadeImagem(listaimagens, "Mapa", true);
+
+                		blck6_view = false;
+                	}
+
+			//clique na sala do rei
+               		if(mouseX >= 540 && mouseX <= 800 && mouseY >= 535 && mouseY <= 560){
+                		texto_visivel8 = 0;
+				texto_visivel11 = 1;
+				
+                    		estado_atual = SALA_REI;
+                    		definirVisibilidadeImagem(listaimagens, "Terreo", false);
+                    		definirVisibilidadeImagem(listaimagens, "SalaRei", true);
+                    		mouseX = 0;
+                    		mouseY = 0;
+                	}
+	
+			//clique no segundo andar
+               		if(mouseX >= 540 && mouseX <= 800 && mouseY >= 505 && mouseY <= 530){
+                		texto_visivel8 = 0;
+				texto_visivel10 = 1;
+				
+                    		estado_atual = SEGUNDO_ANDAR;
+
+                    		definirVisibilidadeImagem(listaimagens, "Terreo", false);
+                    		definirVisibilidadeImagem(listaimagens, "SegundoAndar", true);
+                    		mouseX = 0;
+                    		mouseY = 0;
+               		}
+			
+			//clique no primeiro andar
+                	if(mouseX >= 540 && mouseX <= 800 && mouseY >= 475 && mouseY <= 500){
+                		texto_visivel8 = 0;
+				texto_visivel9 = 1;
+                   		estado_atual = PRIMEIRO_ANDAR;
+                    		definirVisibilidadeImagem(listaimagens, "Terreo", false);
+                    		definirVisibilidadeImagem(listaimagens, "PrimeiroAndar", true);
+                    		mouseX = 0;
+                    		mouseY = 0;
+                	}
+              	}
+              	
+                //clique em direcoes no pantano
+                if(estado_atual == DIRECOES_PANTANO){
+                	
+                	//norte
+                	if(mouseX >= 360 && mouseX <= 460 && mouseY >= 50 && mouseY <= 150){
+                		estado_atual = NORTE_PANTANO;
+                		definirVisibilidadeImagem(listaimagens, "Direcoes_Pantano", true);
+                    definirVisibilidadeImagem(listaimagens, "Direcoes", false);
+                	}
+                	
+                	//sul
+                	if(mouseX >= 360 && mouseX <= 460 && mouseY >= 450 && mouseY <= 550){
+                		estado_atual = SUL_PANTANO;
+                		definirVisibilidadeImagem(listaimagens, "Direcoes_Pantano", true);
+                    definirVisibilidadeImagem(listaimagens, "Direcoes", false);
+                	}
+                	
+                	//leste
+                	if(mouseX >= 600 && mouseX <= 700 && mouseY >= 250  && mouseY <= 350){
+                		estado_atual = LESTE_PANTANO;
+                		definirVisibilidadeImagem(listaimagens, "Direcoes_Pantano", true);
+                    definirVisibilidadeImagem(listaimagens, "Direcoes", false);
+                	}
+                	
+                	//oeste
+                	if(mouseX >= 50 && mouseX <= 150 && mouseY >= 250 && mouseY <= 350){
+                		estado_atual = OESTE_PANTANO;
+                		definirVisibilidadeImagem(listaimagens, "Direcoes_Pantano", true);
+                    definirVisibilidadeImagem(listaimagens, "Direcoes", false);
+                	}
                 }
-
-                if(estado_atual == TERREO && texto_visivel8 == 1 && mouseX >= 540 && mouseX <= 800 && mouseY >= 566 && mouseY <= 600){
-                	texto_visivel8 = 0;
-
-                    estado_atual = MAPA;
-                    definirVisibilidadeImagem(listaimagens, "Terreo", false);
-                    definirVisibilidadeImagem(listaimagens, "Mapa", true);
-
-                	blck6_view = false;
+                
+                //clique em direcoes na planicie
+                if(estado_atual == DIRECOES_PLANICIE){
+                	
+                	//norte
+                	if(mouseX >= 360 && mouseX <= 460 && mouseY >= 50 && mouseY <= 150){
+                		estado_atual = NORTE_PLANICIE;
+                		definirVisibilidadeImagem(listaimagens, "Direcoes_Planicie", true);
+                    definirVisibilidadeImagem(listaimagens, "Direcoes", false);
+                	}
+                	
+                	//sul
+                	if(mouseX >= 360 && mouseX <= 460 && mouseY >= 450 && mouseY <= 550){
+                		estado_atual = SUL_PLANICIE;
+                		definirVisibilidadeImagem(listaimagens, "Direcoes_Planicie", true);
+                    definirVisibilidadeImagem(listaimagens, "Direcoes", false);
+                	}
+                	
+                	//leste
+                	if(mouseX >= 600 && mouseX <= 700 && mouseY >= 250  && mouseY <= 350){
+                		estado_atual = LESTE_PLANICIE;
+                		definirVisibilidadeImagem(listaimagens, "Direcoes_Planicie", true);
+                    definirVisibilidadeImagem(listaimagens, "Direcoes", false);
+                	}
+                	
+                	//oeste
+                	if(mouseX >= 50 && mouseX <= 150 && mouseY >= 250 && mouseY <= 350){
+                		estado_atual = OESTE_PLANICIE;
+                		definirVisibilidadeImagem(listaimagens, "Direcoes_Planicie", true);
+                    definirVisibilidadeImagem(listaimagens, "Direcoes", false);
+                	}
                 }
+                
+                //no primeiro andar
+                if(estado_atual == PRIMEIRO_ANDAR){
+                
+                	//clique no mapa
+               		if(mouseX >= 540 && mouseX <= 800 && mouseY >= 566 && mouseY <= 600){
+                		texto_visivel9 = 0;
+				
+                    		estado_atual = MAPA;
+                    		definirVisibilidadeImagem(listaimagens, "PrimeiroAndar", false);
+                    		definirVisibilidadeImagem(listaimagens, "Mapa", true);
 
-                if(estado_atual == TERREO && texto_visivel8 == 1 && mouseX >= 540 && mouseX <= 800 && mouseY >= 536 && mouseY <= 564){
-                	texto_visivel8 = 0;
+                		blck6_view = false;
+                	}
 
-                    estado_atual = SALA_REI;
-                    definirVisibilidadeImagem(listaimagens, "Terreo", false);
-                    definirVisibilidadeImagem(listaimagens, "SalaRei", true);
+			//clique na sala do rei
+               		if(mouseX >= 540 && mouseX <= 800 && mouseY >= 536 && mouseY <= 564){
+                		texto_visivel9 = 0;
+				texto_visivel11 = 1;
+				
+                    		estado_atual = SALA_REI;
+                    		definirVisibilidadeImagem(listaimagens, "PrimeiroAndar", false);
+                    		definirVisibilidadeImagem(listaimagens, "SalaRei", true);
+                    		
+                    		mouseX = 0;
+                    		mouseY = 0;
+                	}
+	
+			//clique no segundo andar
+               		if(mouseX >= 540 && mouseX <= 800 && mouseY >= 506 && mouseY <=534){
+                		texto_visivel9 = 0;
+				texto_visivel10 = 1;
+				
+                    		estado_atual = SEGUNDO_ANDAR;
 
-                	blck6_view = false;
+                    		definirVisibilidadeImagem(listaimagens, "PrimeiroAndar", false);
+                    		definirVisibilidadeImagem(listaimagens, "SegundoAndar", true);
+                    		
+                    		mouseX = 0;
+                    		mouseY = 0;
+               		}
+			
+			//clique no terreo
+                	if(mouseX >= 540 && mouseX <= 800 && mouseY >= 470 && mouseY <= 504){
+                		texto_visivel8 = 1;
+                		texto_visivel9 = 0;
+
+                   		estado_atual = TERREO;
+                    		definirVisibilidadeImagem(listaimagens, "Terreo", true);
+                    		definirVisibilidadeImagem(listaimagens, "PrimeiroAndar", false);
+                    		
+                    		mouseX = 0;
+                    		mouseY = 0;
+                	}	
                 }
+                
+                //no segundo andar
+                if(estado_atual == SEGUNDO_ANDAR){
+                
+                	//clique no mapa
+               		if(mouseX >= 540 && mouseX <= 800 && mouseY >= 566 && mouseY <= 600){
+                		texto_visivel10 = 0;
+				
+                    		estado_atual = MAPA;
+                    		definirVisibilidadeImagem(listaimagens, "SegundoAndar", false);
+                    		definirVisibilidadeImagem(listaimagens, "Mapa", true);
 
-                if(estado_atual == TERREO && texto_visivel8 == 1 && mouseX >= 540 && mouseX <= 800 && mouseY >= 506 && mouseY <=534){
-                	texto_visivel8 = 0;
+                		blck6_view = false;
+                	}
+			
+			//clique na sala do rei
+               		if(mouseX >= 540 && mouseX <= 800 && mouseY >= 536 && mouseY <= 564){
+                		texto_visivel10 = 0;
+				texto_visivel11 = 1;
+				
+                    		estado_atual = SALA_REI;
+                    		definirVisibilidadeImagem(listaimagens, "SegundoAndar", false);
+                    		definirVisibilidadeImagem(listaimagens, "SalaRei", true);
+                    		
+                    		mouseX = 0;
+                    		mouseY = 0;
+                	}
+	
+			//clique no primeiro andar
+               		if(mouseX >= 540 && mouseX <= 800 && mouseY >= 506 && mouseY <=534){
+                		texto_visivel10 = 0;
+				texto_visivel9 = 1;
+                    		estado_atual = PRIMEIRO_ANDAR;
 
-                    estado_atual = SEGUNDO_ANDAR;
-
-                    definirVisibilidadeImagem(listaimagens, "Terreo", false);
-                    definirVisibilidadeImagem(listaimagens, "SegundoAndar", true);
-                	blck6_view = false;
+                    		definirVisibilidadeImagem(listaimagens, "PrimeiroAndar", true);
+                    		definirVisibilidadeImagem(listaimagens, "SegundoAndar", false);
+                    		
+                    		mouseX = 0;
+                    		mouseY = 0;
+               		}
+			
+			//clique no terreo
+                	if(mouseX >= 540 && mouseX <= 800 && mouseY >= 470 && mouseY <= 504){
+                		texto_visivel8 = 1;
+				texto_visivel10 = 0;
+				
+                   		estado_atual = TERREO;
+                    		definirVisibilidadeImagem(listaimagens, "Terreo", true);
+                    		definirVisibilidadeImagem(listaimagens, "SegundoAndar", false);
+                    		
+                    		mouseX = 0;
+                    		mouseY = 0;
+                	}	
                 }
+                
+                //na sala do rei
+                if(estado_atual == SALA_REI){
+                
+                	//clique no mapa
+               		if(mouseX >= 540 && mouseX <= 800 && mouseY >= 566 && mouseY <= 600){
+                		texto_visivel11 = 0;
 
-                if(estado_atual == TERREO && texto_visivel8 == 1 && mouseX >= 540 && mouseX <= 800 && mouseY >= 470 && mouseY <= 504){
-                	texto_visivel8 = 0;
+                    		estado_atual = MAPA;
+                    		definirVisibilidadeImagem(listaimagens, "SalaRei", false);
+                    		definirVisibilidadeImagem(listaimagens, "Mapa", true);
 
-                    estado_atual = PRIMEIRO_ANDAR;
-                    definirVisibilidadeImagem(listaimagens, "Terreo", false);
-                    definirVisibilidadeImagem(listaimagens, "PrimeiroAndar", true);
-                	blck6_view = false;
+                		blck6_view = false;
+                	}
+
+			//clique no segundo andar
+               		if(mouseX >= 540 && mouseX <= 800 && mouseY >= 536 && mouseY <= 564){
+                		texto_visivel11 = 0;
+				texto_visivel10 = 1;
+				
+                    		estado_atual = SEGUNDO_ANDAR;
+                    		definirVisibilidadeImagem(listaimagens, "SegundoAndar", true);
+                    		definirVisibilidadeImagem(listaimagens, "SalaRei", false);
+                    		
+                    		mouseX = 0;
+                    		mouseY = 0;
+                	}
+	
+			//clique no primeiro andar
+               		if(mouseX >= 540 && mouseX <= 800 && mouseY >= 506 && mouseY <=534){
+                		texto_visivel11 = 0;
+				texto_visivel9 = 1;
+				
+                    		estado_atual = PRIMEIRO_ANDAR;
+
+                    		definirVisibilidadeImagem(listaimagens, "PrimeiroAndar", true);
+                    		definirVisibilidadeImagem(listaimagens, "SalaRei", false);
+                    		
+                    		mouseX = 0;
+                    		mouseY = 0;
+               		}
+			
+			//clique no terreo
+                	if(mouseX >= 540 && mouseX <= 800 && mouseY >= 470 && mouseY <= 504){
+                		texto_visivel11 = 0;
+				texto_visivel9 = 1;
+				
+                   		estado_atual = TERREO;
+                    		definirVisibilidadeImagem(listaimagens, "Terreo", true);
+                    		definirVisibilidadeImagem(listaimagens, "SalaRei", false);
+                    		
+                    		mouseX = 0;
+                    		mouseY = 0;
+                	}	
                 }
 
                 //click em ri1
@@ -769,7 +1032,7 @@ int main (int argc, char* args[])
             printf("\nencostou\n");
         }
 
-        //renderização abaixo tela
+        //renderizaÃ§Ã£o abaixo tela
         SDL_SetRenderDrawColor(ren, red, green, blue, 0x00);
         SDL_RenderClear(ren);
 
@@ -858,35 +1121,64 @@ int main (int argc, char* args[])
         if(texto_visivel2 == 1){
             renderTextAt(ren, estafunc, 0, 500);
         }
-
+	
+	//menu
         if(texto_visivel3 == 1){
             renderTextAt(ren, iniciar, 200, 500);
             renderTextAt(ren, sair, 500, 500);
             renderTextAt(ren, titulo, 280, 10);
         }
-
+	
+	//carregamento
         if(texto_visivel4 == 1){
             renderTextAt(ren, carregamento, 300, 10);
         }
-
+	
+	//vila
         if(texto_visivel5 == 1){
             renderTextAt(ren, loja, 710, 505);
             renderTextAt(ren, arena_text, 710, 535);
             renderTextAt(ren, mapa, 710, 565);
         }
-
+        
+	//pantano e planicie
         if(texto_visivel6 == 1){
             renderTextAt(ren, regioes, 660, 535);
             renderTextAt(ren, mapa_b, 660, 565);
         }
-
+        
+	//terreo
         if(texto_visivel8 == 1){
             renderTextAt(ren, primeiro_andar, 550, 475);
             renderTextAt(ren, segundo_andar, 550, 505);
             renderTextAt(ren, sala_rei, 550, 535);
             renderTextAt(ren, mapa_b, 550, 565);
         }
-
+        
+        //primeiro andar
+        if(texto_visivel9 == 1){
+            renderTextAt(ren, terreo, 550, 475);
+            renderTextAt(ren, segundo_andar, 550, 505);
+            renderTextAt(ren, sala_rei, 550, 535);
+            renderTextAt(ren, mapa_b, 550, 565);
+        }
+        
+        //segundo andar
+        if(texto_visivel10 == 1){
+            renderTextAt(ren, terreo, 550, 475);
+            renderTextAt(ren, primeiro_andar, 550, 505);
+            renderTextAt(ren, sala_rei, 550, 535);
+            renderTextAt(ren, mapa_b, 550, 565);
+        }
+        
+        //sala do rei
+        if(texto_visivel11 == 1){
+            renderTextAt(ren, terreo, 550, 475);
+            renderTextAt(ren, primeiro_andar, 550, 505);
+            renderTextAt(ren, segundo_andar, 550, 535);
+            renderTextAt(ren, mapa_b, 550, 565);
+        }
+        
         SDL_RenderPresent(ren);
     }
 
