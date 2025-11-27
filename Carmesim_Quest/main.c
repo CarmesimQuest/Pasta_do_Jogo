@@ -799,18 +799,24 @@ int main (int argc, char* args[])
                         estado_atual = SALA_REI;
                         definirVisibilidadeImagem(listaimagens, "Terreo", false);
                         definirVisibilidadeImagem(listaimagens, "SalaRei", true);
+                        mouseX = 0;
+                        mouseY = 0;
                     }
                     //clique no segundo andar
                     if(mouseX >= 540 && mouseX <= 800 && mouseY >= 505 && mouseY <= 530){
                         estado_atual = SEGUNDO_ANDAR;
                         definirVisibilidadeImagem(listaimagens, "Terreo", false);
                         definirVisibilidadeImagem(listaimagens, "SegundoAndar", true);
+                        mouseX = 0;
+                        mouseY = 0;
                     }
                     //clique no primeiro andar
                     if(mouseX >= 540 && mouseX <= 800 && mouseY >= 475 && mouseY <= 500){
                         estado_atual = PRIMEIRO_ANDAR;
                         definirVisibilidadeImagem(listaimagens, "Terreo", false);
                         definirVisibilidadeImagem(listaimagens, "PrimeiroAndar", true);
+                        mouseX = 0;
+                        mouseY = 0;
                     }
                 }
 
@@ -884,18 +890,24 @@ int main (int argc, char* args[])
                         estado_atual = SALA_REI;
                         definirVisibilidadeImagem(listaimagens, "PrimeiroAndar", false);
                         definirVisibilidadeImagem(listaimagens, "SalaRei", true);
+                        mouseX = 0;
+                        mouseY = 0;
                     }
                     //clique no segundo andar
                     if(mouseX >= 540 && mouseX <= 800 && mouseY >= 506 && mouseY <=534){
                         estado_atual = SEGUNDO_ANDAR;
                         definirVisibilidadeImagem(listaimagens, "PrimeiroAndar", false);
                         definirVisibilidadeImagem(listaimagens, "SegundoAndar", true);
+                        mouseX = 0;
+                        mouseY = 0;
                     }
                     //clique no terreo
                     if(mouseX >= 540 && mouseX <= 800 && mouseY >= 470 && mouseY <= 504){
                         estado_atual = TERREO;
                         definirVisibilidadeImagem(listaimagens, "Terreo", true);
                         definirVisibilidadeImagem(listaimagens, "PrimeiroAndar", false);
+                        mouseX = 0;
+                        mouseY = 0;
                     }
                 }
 
@@ -913,18 +925,24 @@ int main (int argc, char* args[])
                         estado_atual = SALA_REI;
                         definirVisibilidadeImagem(listaimagens, "SegundoAndar", false);
                         definirVisibilidadeImagem(listaimagens, "SalaRei", true);
+                        mouseX = 0;
+                        mouseY = 0;
                     }
                     //clique no primeiro andar
                     if(mouseX >= 540 && mouseX <= 800 && mouseY >= 506 && mouseY <=534){
                         estado_atual = PRIMEIRO_ANDAR;
                         definirVisibilidadeImagem(listaimagens, "PrimeiroAndar", true);
                         definirVisibilidadeImagem(listaimagens, "SegundoAndar", false);
+                        mouseX = 0;
+                        mouseY = 0;
                     }
                     //clique no terreo
                     if(mouseX >= 540 && mouseX <= 800 && mouseY >= 470 && mouseY <= 504){
                         estado_atual = TERREO;
                         definirVisibilidadeImagem(listaimagens, "Terreo", true);
                         definirVisibilidadeImagem(listaimagens, "SegundoAndar", false);
+                        mouseX = 0;
+                        mouseY = 0;
                     }
                 }
 
@@ -942,18 +960,24 @@ int main (int argc, char* args[])
                         estado_atual = SEGUNDO_ANDAR;
                         definirVisibilidadeImagem(listaimagens, "SegundoAndar", true);
                         definirVisibilidadeImagem(listaimagens, "SalaRei", false);
+                        mouseX = 0;
+                        mouseY = 0;
                     }
                     //clique no primeiro andar
                     if(mouseX >= 540 && mouseX <= 800 && mouseY >= 506 && mouseY <=534){
                         estado_atual = PRIMEIRO_ANDAR;
                         definirVisibilidadeImagem(listaimagens, "PrimeiroAndar", true);
                         definirVisibilidadeImagem(listaimagens, "SalaRei", false);
+                        mouseX = 0;
+                        mouseY = 0;
                     }
                     //clique no terreo
                     if(mouseX >= 540 && mouseX <= 800 && mouseY >= 470 && mouseY <= 504){
                         estado_atual = TERREO;
                         definirVisibilidadeImagem(listaimagens, "Terreo", true);
                         definirVisibilidadeImagem(listaimagens, "SalaRei", false);
+                        mouseX = 0;
+                        mouseY = 0;
                     }
                 }
 
@@ -1080,4 +1104,3 @@ int main (int argc, char* args[])
 
     return 0;
 }
-
