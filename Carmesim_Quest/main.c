@@ -561,8 +561,8 @@ void carregarLestePantano() {
 void carregarOestePantano() {
     esconderTodasImagens(imagens_globais);
     esconderTodosOsTextos(textos_globais);
-    definirVisibilidadeImagem(imagens_globais, "Pantano", true);
-    setTextVisibilidade(textos_globais, "mapa_text", true);
+    definirVisibilidadeImagem(imagens_globais, "Oeste_pantano", true);
+    setTextVisibilidade(textos_globais, "", true);
 }
 
 void carregarNortePlanicie() {
@@ -610,7 +610,6 @@ void carregarRosaDosVentos(){
 }
 
 void desativarEstadoAtual() {
-    // Esconde todas as imagens e textos do estado atual
     esconderTodasImagens(imagens_globais);
     esconderTodosOsTextos(textos_globais);
 }
@@ -619,7 +618,6 @@ void desativarEstadoAtual() {
 void mudarEstado(EstadoJogo novo_estado) {
     printf("Mudando estado de %d para %d\n", estado_atual, novo_estado);
 
-    // Primeiro desativa o estado atual
     desativarEstadoAtual();
 
     estado_anterior = estado_atual;
@@ -648,6 +646,7 @@ void mudarEstado(EstadoJogo novo_estado) {
         case ESTADO_SALA_REI: carregarSalaRei(); break;
         case ESTADO_ARENA: carregarArena(); break;
         case ESTADO_ROSA_DOS_VENTOS: carregarRosaDosVentos(); break;
+
         default: carregarMenu(); break;
     }
 }
@@ -707,34 +706,6 @@ void renderizarBotao(SDL_Renderer* ren, Botao btn, TTF_Font* fonte) {
     }
 }
 
-// Cores para os botões
-SDL_Color corVerde = {0, 128, 0, 255};      // Pantano
-SDL_Color corMarrom = {139, 69, 19, 255};   // Planície
-SDL_Color corDourado = {184, 134, 11, 255}; // Castelo
-SDL_Color corVermelho = {178, 34, 34, 255}; // Arena
-SDL_Color corAzul = {30, 144, 255, 255};    // Menu
-SDL_Color corBorda = {255, 255, 255, 255};  // Borda branca
-SDL_Color corTexto = {255, 255, 255, 255};  // Texto branco
-
-// Botões do Menu Principal
-Botao btnIniciar, btnSair;
-
-// Botões da Vila
-Botao btnLoja, btnArena, btnMapa;
-
-// Botões do Mapa
-Botao btnPantano, btnPlanicie, btnCastelo, btnVoltarMapa;
-
-// Botões da Arena
-Botao btnAtacar, btnBolsa, btnFugir;
-
-// Botões das Regiões
-Botao btnRegioesPantano, btnVoltarPantano;
-Botao btnRegioesPlanicie, btnVoltarPlanicie;
-
-// Botões do Castelo
-Botao btnTerreo, btnPrimeiroAndar, btnSegundoAndar, btnSalaRei, btnVoltarCastelo;
-
 //FUNÇÃO MAIN
 int main (int argc, char* args[])
 {
@@ -753,7 +724,7 @@ int main (int argc, char* args[])
     SDL_Renderer* ren = SDL_CreateRenderer(win, -1, SDL_RENDERER_ACCELERATED);
 
     // Carregar a fonte uma única vez no início
-    TTF_Font* fnt = TTF_OpenFont("minecraft_font.ttf", 24);
+    TTF_Font* fnt = TTF_OpenFont("antiquity-print.ttf", 24);
     SDL_Color corTexto = { 0, 0, 0, 255};
     SDL_Color ver = {255, 0, 0, 255};
     SDL_Color gold = {255, 215, 0, 255};
@@ -768,15 +739,30 @@ int main (int argc, char* args[])
     SDL_Color corAzul = {30, 144, 255, 255};    // Menu
     SDL_Color corBorda = {255, 255, 255, 255};  // Borda branca
     SDL_Color corTextoBtn = {255, 255, 255, 255};  // Texto branco
+    SDL_Color corTransparente = {0, 0, 0, 0}; //para botoes tranparentes
 
      // ========== DECLARAÇÃO DOS BOTÕES ==========
+    // Botões do Menu Principal
     Botao btnIniciar, btnSair;
+
+    // Botões da Vila
     Botao btnLoja, btnArena, btnMapa;
+
+    // Botões do Mapa
     Botao btnPantano, btnPlanicie, btnCastelo, btnVoltarMapa;
+
+    // Botões da Arena
     Botao btnAtacar, btnBolsa, btnFugir;
+
+    // Botões das Regiões
     Botao btnRegioesPantano, btnVoltarPantano;
     Botao btnRegioesPlanicie, btnVoltarPlanicie;
+
+    // Botões do Castelo
     Botao btnTerreo, btnPrimeiroAndar, btnSegundoAndar, btnSalaRei, btnVoltarCastelo;
+
+    // Botões da rosa dos ventos
+    Botao btnOeste, btnLeste, btnNorte, btnSul;
 
     // Inicializar listas globais
     imagens_globais = criarListaImagens();
@@ -791,8 +777,8 @@ int main (int argc, char* args[])
     adicionarImagem(imagens_globais, criarObjetoImagem("Planicie.png", ren, 0, 0, 800, 600), "Planicie");
     adicionarImagem(imagens_globais, criarObjetoImagem("Terreo.png", ren, 0, 0, 800, 600), "Terreo");
     adicionarImagem(imagens_globais, criarObjetoImagem("Direcoes.png", ren, 0, 0, 800, 600), "Direcoes");
-    adicionarImagem(imagens_globais, criarObjetoImagem("DirecoesPantano.png", ren, 0, 0, 800, 600), "DirecoesPantano");
-    adicionarImagem(imagens_globais, criarObjetoImagem("DirecoesPlanicie.png", ren, 0, 0, 800, 600), "DirecoesPlanicie");
+    adicionarImagem(imagens_globais, criarObjetoImagem("Oeste_pantano.png", ren, 0, 0, 800, 600), "Oeste_pantano");
+    adicionarImagem(imagens_globais, criarObjetoImagem("Oeste_planicie.png", ren, 0, 0, 800, 600), "Oeste_pantano");
     adicionarImagem(imagens_globais, criarObjetoImagem("PrimeiroAndar.png", ren, 0, 0, 800, 600), "PrimeiroAndar");
     adicionarImagem(imagens_globais, criarObjetoImagem("SegundoAndar.png", ren, 0, 0, 800, 600), "SegundoAndar");
     adicionarImagem(imagens_globais, criarObjetoImagem("SalaRei.png", ren, 0, 0, 800, 600), "SalaRei");
@@ -800,25 +786,14 @@ int main (int argc, char* args[])
     adicionarImagem(imagens_globais, criarObjetoImagem("Carregamento.png", ren, 0, 0, 800, 600), "Tela_de_Carregamento");
 
     // Adicionar TODOS os textos (exemplo)
-    adicionartexto(textos_globais, ren, fnt, "INICIAR", ver, 200, 500, "menu_iniciar");
-    adicionartexto(textos_globais, ren, fnt, "SAIR", ver, 500, 500, "menu_sair");
     adicionartexto(textos_globais, ren, fnt, "CARMESIM QUEST", ver, 280, 10, "titulo");
     adicionartexto(textos_globais, ren, fnt, "CARREGANDO", gold, 300, 10, "carregamento");
-    adicionartexto(textos_globais, ren, fnt, "REGIOES", branco, 660, 535, "regioes_text");
-    adicionartexto(textos_globais, ren, fnt, "MAPA", branco, 660, 565, "mapa_text");
-    adicionartexto(textos_globais, ren, fnt, "PRIMEIRO ANDAR", branco, 550, 475, "primeiro_andar");
-    adicionartexto(textos_globais, ren, fnt, "SEGUNDO ANDAR", branco, 550, 505, "segundo_andar");
-    adicionartexto(textos_globais, ren, fnt, "SALA DO REI", branco, 550, 535, "sala_rei");
-    adicionartexto(textos_globais, ren, fnt, "TERREO", branco, 550, 475, "terreo_text");
-    adicionartexto(textos_globais, ren, fnt, "ATACAR", branco, 640, 460, "btn_atacar");
-    adicionartexto(textos_globais, ren, fnt, "BOLSA", branco, 640, 510, "btn_bolsa");
-    adicionartexto(textos_globais, ren, fnt, "FUGIR", branco, 640, 560, "btn_fugir");
     adicionartexto(textos_globais, ren, fnt, " ", branco, 300, 250, "mensagem_batalha");
 
     // ========== INICIALIZAR TODOS OS BOTÕES ==========
 
    // Menu Principal
-    btnIniciar = criarBotao(200, 500, 150, 40, "INICIAR", corAzul, corBorda, corTextoBtn);
+    btnIniciar = criarBotao(200, 500, 190, 40, "INICIAR", corAzul, corBorda, corTextoBtn);
     btnSair = criarBotao(500, 500, 100, 40, "SAIR", corVermelho, corBorda, corTextoBtn);
 
     // Vila
@@ -827,9 +802,9 @@ int main (int argc, char* args[])
     btnMapa = criarBotao(480, 500, 120, 30, "MAPA", corDourado, corBorda, corTextoBtn);
 
     // Mapa
-    btnPantano = criarBotao(125, 484, 150, 40, "PANTANO", corVerde, corBorda, corTextoBtn);
-    btnPlanicie = criarBotao(500, 200, 150, 40, "PLANICIE", corMarrom, corBorda, corTextoBtn);
-    btnCastelo = criarBotao(500, 400, 150, 40, "CASTELO", corDourado, corBorda, corTextoBtn);
+    btnPantano = criarBotao(125, 484, 190, 40, "PANTANO", corVerde, corBorda, corTextoBtn);
+    btnPlanicie = criarBotao(500, 200, 210, 40, "PLANICIE", corMarrom, corBorda, corTextoBtn);
+    btnCastelo = criarBotao(500, 490, 190, 40, "CASTELO", corDourado, corBorda, corTextoBtn);
     btnVoltarMapa = criarBotao(640, 560, 150, 40, "VOLTAR", corVermelho, corBorda, corTextoBtn);
 
     // Arena
@@ -838,7 +813,7 @@ int main (int argc, char* args[])
     btnFugir = criarBotao(600, 550, 150, 40, "FUGIR", corVerde, corBorda, corTextoBtn);
 
     // Pantano
-    btnRegioesPantano = criarBotao(640, 530, 150, 40, "REGIÕES", corVerde, corBorda, corTextoBtn);
+    btnRegioesPantano = criarBotao(640, 500, 150, 40, "REGIÕES", corVerde, corBorda, corTextoBtn);
     btnVoltarPantano = criarBotao(640, 560, 150, 40, "VOLTAR", corVermelho, corBorda, corTextoBtn);
 
     // Planície
@@ -851,6 +826,9 @@ int main (int argc, char* args[])
     btnSegundoAndar = criarBotao(550, 535, 200, 25, "SEGUNDO ANDAR", corDourado, corBorda, corTextoBtn);
     btnSalaRei = criarBotao(550, 565, 200, 25, "SALA DO REI", corDourado, corBorda, corTextoBtn);
     btnVoltarCastelo = criarBotao(140, 500, 150, 40, "VOLTAR", corVermelho, corBorda, corTextoBtn);
+
+    // Rosa dos ventos
+    btnOeste = criarBotao(0, 200, 200, 100, "", corTransparente, corTransparente, corTransparente);
 
     // Iniciar no menu
     mudarEstado(ESTADO_MENU_PRINCIPAL);
@@ -944,6 +922,13 @@ int main (int argc, char* args[])
                 }
             }
 
+            //Oeste pantano
+            if(estado_atual == ESTADO_OESTE_PANTANO){
+                if(cliqueBotao(btnVoltarPantano, mouseX, mouseY)){
+                    mudarEstado(ESTADO_PANTANO);
+                }
+            }
+
             // Planície
             if(estado_atual == ESTADO_PLANICIE) {
                 if(cliqueBotao(btnRegioesPlanicie, mouseX, mouseY)) {
@@ -1017,6 +1002,13 @@ int main (int argc, char* args[])
                     mudarEstado(ESTADO_MAPA);
                     }
                 }
+
+            //Rosa dos ventos
+            if(estado_atual == ESTADO_ROSA_DOS_VENTOS){
+                if(cliqueBotao(btnOeste, mouseX, mouseY)){
+                    mudarEstado(ESTADO_OESTE_PANTANO);
+                }
+            }
 
                 // Batalha na Arena
                 if(estado_atual == ESTADO_ARENA && em_batalha) {
@@ -1112,6 +1104,11 @@ int main (int argc, char* args[])
         // Pantano
         if(estado_atual == ESTADO_PANTANO) {
             renderizarBotao(ren, btnRegioesPantano, fnt);
+            renderizarBotao(ren, btnVoltarPantano, fnt);
+        }
+
+        // Oeste - Pantano
+        if(estado_atual == ESTADO_OESTE_PANTANO){
             renderizarBotao(ren, btnVoltarPantano, fnt);
         }
 
