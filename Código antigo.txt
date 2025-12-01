@@ -1,0 +1,1106 @@
+#include <SDL2/SDL.h>
+#include <SDL2/SDL_ttf.h>
+#include <SDL2/SDL_image.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <time.h>
+#include <stdbool.h>
+#include <string.h>
+
+//estrutura dos personagens
+typedef struct character{
+    int HP;
+    int STR;
+    int INT;
+    int DEX;
+    bool vivo;
+    bool mao_esq;
+    bool mao_dir;
+}CHC;
+
+//estrutura dos inimigos
+typedef struct inimigo{
+    char nome[50];
+    int HP;
+    int STR;
+    int INT;
+    int DEX;
+    bool vivo;
+}INI;
+
+// Variáveis globais para batalha
+bool em_batalha = false;
+INI inimigo_atual;
+int turno_atual = 0;
+char buffer_mensagem[200];
+
+//funções para texto abaixo
+typedef struct TextTexture{
+    SDL_Texture* texture;
+    int largura;
+    int altura;
+    bool visivel;
+}TTR;
+
+TTR CarregaTexto(SDL_Renderer* renderer, TTF_Font* font, const char* text, SDL_Color color){
+    TTR result = {NULL, 0, 0};
+
+    SDL_Surface* surface = TTF_RenderText_Blended(font, text, color);
+
+    if(!surface){
+        return result;
+    }
+
+    result.texture = SDL_CreateTextureFromSurface(renderer, surface);
+
+    if(result.texture){
+        result.largura = surface -> w;
+        result.altura = surface -> h;
+    }
+
+    SDL_FreeSurface(surface);
+    return result;
+}
+
+void renderTextAt(SDL_Renderer* renderer, TTR text, int x, int y){
+    if(!text.texture){
+        return;
+    }
+
+    SDL_Rect dest = {x, y, text.largura, text.altura};
+    SDL_RenderCopy(renderer, text.texture, NULL, &dest);
+}
+
+void freeTextTexture(TTR text){
+    if(text.texture){
+        SDL_DestroyTexture(text.texture);
+    }
+}
+
+//funções para imagens abaixo
+SDL_Texture* carregarTextura(const char* caminho, SDL_Renderer* renderer){
+    SDL_Texture* textura = NULL;
+    SDL_Surface* superficie = IMG_Load(caminho);
+
+    if(!superficie){
+        printf("Erro ao abrir carregar imagem %s: %s\n", caminho, IMG_GetError());
+        return NULL;
+    }
+
+    textura = SDL_CreateTextureFromSurface(renderer, superficie);
+    SDL_FreeSurface(superficie);
+
+    return textura;
+}
+
+typedef struct ObjImage{
+    SDL_Texture* textura;
+    SDL_Rect posicao;
+    bool visivel;
+}OBI;
+
+OBI criarObjetoImagem(const char* caminho, SDL_Renderer* renderer, int x, int y, int w, int h){
+    OBI obj = {0};
+    obj.textura = carregarTextura(caminho, renderer);
+    obj.posicao = (SDL_Rect){x, y, w, h};
+    return obj;
+}
+
+typedef struct Noimagem{
+    OBI imagem;
+    char nome[50];
+    struct Noimagem* prox;
+}Noimagem;
+
+typedef struct ListaImagens{
+    Noimagem* head;
+    int qtde;
+}ListaImagens;
+
+//criar uma nova lista vazia
+ListaImagens* criarListaImagens(){
+    ListaImagens* lista = (ListaImagens*)malloc(sizeof(ListaImagens));
+    lista -> head = NULL;
+    lista -> qtde = 0;
+    return lista;
+}
+
+void adicionarImagem(ListaImagens* lista, OBI imagem, const char* nome){
+    Noimagem* novoNo = (Noimagem*)malloc(sizeof(Noimagem));
+    novoNo -> imagem = imagem;
+    strcpy(novoNo -> nome, nome);
+    novoNo -> prox = NULL;
+
+    //se a lista estiver vazia
+    if(lista -> head == NULL){
+        lista -> head = novoNo;
+    }
+    else{
+        Noimagem* atual = lista -> head;
+        while(atual -> prox != NULL){
+            atual = atual -> prox;
+        }
+        atual -> prox = novoNo;
+    }
+    lista -> qtde++;
+}
+
+OBI* buscaImagem(ListaImagens* lista, const char* nome){
+    Noimagem* atual = lista -> head;
+    while(atual != NULL){
+        if(strcmp(atual -> nome, nome) == 0){
+            return &(atual -> imagem);
+        }
+        atual = atual -> prox;
+    }
+    return NULL; //caso não encontre
+}
+
+void renderizarImagemPorNome(ListaImagens* lista, SDL_Renderer* renderer, const char* nome){
+    OBI* imagem = buscaImagem(lista, nome);
+    if(imagem && imagem -> textura){
+        SDL_RenderCopy(renderer, imagem -> textura, NULL, &imagem -> posicao);
+    }
+}
+
+//definir visibilidade das imagens
+void definirVisibilidadeImagem(ListaImagens* lista, const char* nome, bool visivel){
+
+    Noimagem* atual = lista -> head;
+
+    while(atual != NULL){
+        if(strcmp(atual -> nome, nome) == 0){
+            atual -> imagem.visivel = visivel;
+            return;
+        }
+        atual = atual -> prox;
+    }
+    printf("Imagem '%s' não encontrada para definir visibilidade.\n", nome);
+}
+
+void renderizarImagensVisiveis(ListaImagens* lista, SDL_Renderer* renderer){
+
+    Noimagem* atual = lista -> head;
+
+    while(atual != NULL){
+        if(atual -> imagem.visivel && atual -> imagem.textura){
+            SDL_RenderCopy(renderer, atual -> imagem.textura, NULL, &atual -> imagem.posicao);
+        }
+        atual = atual -> prox;
+    }
+}
+
+void esconderTodasImagens(ListaImagens* lista){
+
+    Noimagem* atual = lista -> head;
+    while(atual != NULL){
+        atual -> imagem.visivel = false;
+        atual = atual -> prox;
+    }
+}
+
+//liberar toda a memoria da lista de imagens
+void liberarListaImagem(ListaImagens* lista){
+    Noimagem* atual = lista -> head;
+    while(atual != NULL){
+        Noimagem* proximo = atual -> prox;
+        if(atual -> imagem.textura){
+            SDL_DestroyTexture(atual -> imagem.textura);
+        }
+        free(atual);
+        atual = proximo;
+    }
+    free(lista);
+}
+
+// ========== LISTA ENCADEADA DE TEXTOS ==========
+typedef struct TextNode {
+    TTR textTexture;
+    char nome[50];
+    bool visible;
+    int x, y;
+    struct TextNode* prox;
+} TextNode;
+
+typedef struct TextList {
+    TextNode* head;
+    int count;
+} TextList;
+
+//criar lista de textos
+TextList* createTextList(){
+    TextList* list = (TextList*)malloc(sizeof(TextList));
+    list->head = NULL;
+    list->count = 0;
+    return list;
+}
+
+//Adicionar texto a lista
+void adicionartexto(TextList* list, SDL_Renderer* renderer, TTF_Font* font, const char* text, SDL_Color color, int x, int y, const char* nome){
+    TextNode* newNode = (TextNode*)malloc(sizeof(TextNode));
+    newNode->textTexture = CarregaTexto(renderer, font, text, color);
+    strcpy(newNode->nome, nome);
+    newNode->visible = true;
+    newNode->x = x;
+    newNode->y = y;
+    newNode->prox = NULL;
+
+    if(list->head == NULL){
+        list->head = newNode;
+    }
+    else{
+        TextNode* atual = list->head;
+        while(atual->prox != NULL){
+            atual = atual->prox;
+        }
+        atual->prox = newNode;
+    }
+    list->count++;
+}
+
+//buscar texto por nome
+TextNode* buscaTexto(TextList* list, const char* nome){
+    TextNode* atual = list->head;
+    while(atual != NULL){
+        if(strcmp(atual->nome, nome) == 0){
+            return atual;
+        }
+        atual = atual->prox;
+    }
+    return NULL;
+}
+
+//renderizar texto por nome
+void renderizarTextoPorNome(TextList* list, SDL_Renderer* renderer, const char* nome){
+    TextNode* textNode = buscaTexto(list, nome);
+    if(textNode && textNode->visible){
+        renderTextAt(renderer, textNode->textTexture, textNode->x, textNode->y);
+    }
+}
+
+//renderizar todos os textos visiveis
+void RenderizarTodosOsTextosVisiveis(TextList* list, SDL_Renderer* renderer){
+    TextNode* atual = list->head;
+    while(atual != NULL){
+        if(atual->visible){
+            renderTextAt(renderer, atual->textTexture, atual->x, atual->y);
+        }
+        atual = atual->prox;
+    }
+}
+
+//Definir visibilidade do texto
+void setTextVisibilidade(TextList* list, const char* nome, bool visible){
+    TextNode* textNode = buscaTexto(list, nome);
+    if(textNode){
+        textNode->visible = visible;
+    }
+}
+
+//esconder todos os textos
+void esconderTodosOsTextos(TextList* list){
+    TextNode* atual = list->head;
+    while(atual != NULL){
+        atual->visible = false;
+        atual = atual->prox;
+    }
+}
+
+//atualizar texto
+void updateText(TextList* list, SDL_Renderer* renderer, TTF_Font* font, const char* nome, const char* newText, SDL_Color color){
+    TextNode* textNode = buscaTexto(list, nome);
+    if(textNode){
+        freeTextTexture(textNode->textTexture);
+        textNode->textTexture = CarregaTexto(renderer, font, newText, color);
+    }
+}
+
+//mover texto
+void moveText(TextList* list, const char* nome, int newX, int newY){
+    TextNode* textNode = buscaTexto(list, nome);
+    if(textNode){
+        textNode->x = newX;
+        textNode->y = newY;
+    }
+}
+
+//liberar memória da lista
+void freeTextList(TextList* list){
+    TextNode* atual = list->head;
+    while(atual != NULL){
+        TextNode* prox = atual->prox;
+        freeTextTexture(atual->textTexture);
+        free(atual);
+        atual = prox;
+    }
+    free(list);
+}
+
+//inicializar o inimigo
+void inicializarInimigo(INI* inimigo, const char* nome, int hp, int str){
+    strcpy(inimigo -> nome, nome);
+    inimigo -> HP = hp;
+    inimigo -> STR = str;
+    inimigo -> vivo = true;
+}
+
+//função para ataque do jogador
+void ataqueJogador(CHC* jogador, INI* inimigo){
+    int dano = jogador -> STR + (rand() % 3);
+    inimigo -> HP -= dano;
+
+    if(inimigo -> HP < 0){
+        inimigo -> HP = 0;
+    }
+
+    snprintf(buffer_mensagem, sizeof(buffer_mensagem), "Voce atacou e causou %d de dano! %s HP: %d", dano, inimigo -> nome, inimigo -> HP);
+
+    if(inimigo -> HP <= 0){
+        inimigo -> vivo = false;
+        strcat(buffer_mensagem, " - INIMIGO DERROTADO");
+    }
+}
+
+// funçao para ataque do inimigo
+void ataqueInimigo(CHC* jogador, INI* inimigo){
+    int dano = inimigo -> STR + (rand() % 3);
+    jogador -> HP -= dano;
+
+    if(jogador -> HP < 0){
+        jogador -> HP = 0;
+    }
+
+    snprintf(buffer_mensagem, sizeof(buffer_mensagem), "%s atacou e causou %d de dano! Seu HP: %d", inimigo -> nome, dano, jogador -> HP);
+
+    if(jogador -> HP <= 0){
+        jogador -> vivo = false;
+        strcat(buffer_mensagem, " - VOCE MORREU!");
+    }
+}
+
+//função para iniciar a batalha
+void iniciarBatalha(CHC* jogador){
+    em_batalha = true;
+    turno_atual = 0;
+    inicializarInimigo(&inimigo_atual, "Guerreiro da Arena", 10, 2);
+    strcpy(buffer_mensagem, "Batalha iniciada! Escolha uma acao.");
+}
+
+//FUNÇÃO MAIN
+int main (int argc, char* args[])
+{
+    //adicionado para fins de aleatoriedade
+    srand(time(NULL));
+
+    SDL_Init(SDL_INIT_EVERYTHING);
+    TTF_Init(); // Inicializar TTF
+
+    SDL_Window* win = SDL_CreateWindow("Teste Carmim",
+                         SDL_WINDOWPOS_UNDEFINED,
+                         SDL_WINDOWPOS_UNDEFINED,
+                         800, 600, SDL_WINDOW_SHOWN
+                      );
+
+    SDL_Renderer* ren = SDL_CreateRenderer(win, -1, SDL_RENDERER_ACCELERATED);
+
+    //cria a lista de imagens
+    ListaImagens* listaimagens = criarListaImagens();
+
+    //adiciona imagens na lista
+    adicionarImagem(listaimagens, criarObjetoImagem("Castle.png", ren, 0, 0, 800, 600), "Menu_Principal");
+    adicionarImagem(listaimagens, criarObjetoImagem("vila_place_holder.png", ren, 0, 0, 800, 500), "vila");
+    adicionarImagem(listaimagens, criarObjetoImagem("Planicie.png", ren, 0, 0, 800, 600), "Planicie");
+    adicionarImagem(listaimagens, criarObjetoImagem("Pantano.png", ren, 0, 0, 800, 600), "Pantano");
+    adicionarImagem(listaimagens, criarObjetoImagem("Carregamento.png", ren, 0, 0, 800, 600), "Tela_de_Carregamento");
+    adicionarImagem(listaimagens, criarObjetoImagem("Vila.png", ren, 0, 0, 800, 600), "Vila");
+    adicionarImagem(listaimagens, criarObjetoImagem("Mapa.png", ren, 0, 0, 800, 600), "Mapa");
+    adicionarImagem(listaimagens, criarObjetoImagem("arena.png", ren, 0, 0, 800, 600), "Arena");
+    adicionarImagem(listaimagens, criarObjetoImagem("guerreiro_basico_arena.png", ren, 300, 150, 200, 300), "guerreiro_da_Arena");
+    adicionarImagem(listaimagens, criarObjetoImagem("Terreo.png", ren, 0, 0, 800, 600), "Terreo");
+    adicionarImagem(listaimagens, criarObjetoImagem("Direcoes.png", ren, 0, 0, 800, 600), "Direcoes");
+    adicionarImagem(listaimagens, criarObjetoImagem("DirecoesPantano.png", ren, 0, 0, 800, 600), "Direcoes_Pantano");
+    adicionarImagem(listaimagens, criarObjetoImagem("DirecoesPlanicie.png", ren, 0, 0, 800, 600), "Direcoes_Planicie");
+    adicionarImagem(listaimagens, criarObjetoImagem("PrimeiroAndar.png", ren, 0, 0, 800, 600), "PrimeiroAndar");
+    adicionarImagem(listaimagens, criarObjetoImagem("SegundoAndar.png", ren, 0, 0, 800, 600), "SegundoAndar");
+    adicionarImagem(listaimagens, criarObjetoImagem("SalaRei.png", ren, 0, 0, 800, 600), "SalaRei");
+
+    esconderTodasImagens(listaimagens);
+    definirVisibilidadeImagem(listaimagens, "Menu_Principal", true);
+
+    // Carregar a fonte uma única vez no início
+    TTF_Font* fnt = TTF_OpenFont("minecraft_font.ttf", 24);
+    SDL_Color corTexto = { 0, 255, 255, 255};
+    SDL_Color ver = {255, 0, 0, 255};
+    SDL_Color gold = {255, 215, 0, 255};
+    SDL_Color yel = {255, 255, 0, 255};
+    SDL_Color branco = { 255, 255, 255, 255};
+
+    //cria lista de textos
+    TextList* listaTextos = createTextList();
+
+    //adiciona textos na lista
+    adicionartexto(listaTextos, ren, fnt, "INICIAR", ver, 200, 500, "menu_iniciar");
+    adicionartexto(listaTextos, ren, fnt, "SAIR", ver, 500, 500, "menu_sair");
+    adicionartexto(listaTextos, ren, fnt, "CARMESIM QUEST", ver, 280, 10, "titulo");
+    adicionartexto(listaTextos, ren, fnt, "CARREGANDO", gold, 300, 10, "carregamento");
+    adicionartexto(listaTextos, ren, fnt, "LOJA", yel, 710, 505, "vila_loja");
+    adicionartexto(listaTextos, ren, fnt, "ARENA", yel, 710, 535, "vila_arena");
+    adicionartexto(listaTextos, ren, fnt, "MAPA", yel, 710, 565, "vila_mapa");
+    adicionartexto(listaTextos, ren, fnt, "REGIOES", branco, 660, 535, "regioes_text");
+    adicionartexto(listaTextos, ren, fnt, "MAPA", branco, 660, 565, "mapa_text");
+    adicionartexto(listaTextos, ren, fnt, "PRIMEIRO ANDAR", branco, 550, 475, "primeiro_andar");
+    adicionartexto(listaTextos, ren, fnt, "SEGUNDO ANDAR", branco, 550, 505, "segundo_andar");
+    adicionartexto(listaTextos, ren, fnt, "SALA DO REI", branco, 550, 535, "sala_rei");
+    adicionartexto(listaTextos, ren, fnt, "TERREO", branco, 550, 475, "terreo_text");
+    adicionartexto(listaTextos, ren, fnt, "ATACAR", branco, 640, 460, "btn_atacar");
+    adicionartexto(listaTextos, ren, fnt, "BOLSA", branco, 640, 510, "btn_bolsa");
+    adicionartexto(listaTextos, ren, fnt, "FUGIR", branco, 640, 560, "btn_fugir");
+    adicionartexto(listaTextos, ren, fnt, " ", corTexto, 300, 250, "mensagem_batalha");
+
+    //esconder todos os textos inicialmente
+    esconderTodosOsTextos(listaTextos);
+
+    //blocos
+    SDL_Rect r = { 200, 500, 150, 40 };
+    SDL_Rect r2 = { 500, 500, 100, 40 };
+    SDL_Rect r3 = { 0, 500, 800, 200};
+    SDL_Rect r4 = {700, 500, 100, 100};
+    SDL_Rect r5 = {640, 530, 160, 70};
+    SDL_Rect r6 = {540, 470, 260, 130};
+
+    //blocos invisiveis para botões
+    SDL_Rect ri1 = { 710, 545, 50, 20 };
+
+    //blocos dos botões de batalha
+    SDL_Rect btn_atacar = {600, 450, 150, 40};
+    SDL_Rect btn_bolsa = {600, 500, 150, 40};
+    SDL_Rect btn_fugir = {600, 550, 150, 40};
+
+    //verifica aparição de blocos
+    bool blck1_view = false;
+    bool cfm_click1 = true;
+
+    bool blck2_view = false;
+    bool cfm_click2 = true;
+
+    bool blck3_view = false;
+    bool cfm_click3 = false;
+
+    bool blck4_view = false;
+    bool blck5_view = false;
+    bool blck6_view = false;
+
+    bool blck_ri1_view = false;
+    bool cfm_click_ri1 = false;
+
+    enum EstadoJogo{
+        MENU_PRINCIPAL,
+        TELA_CARREGAMENTO,
+        VILA,
+        MAPA,
+        PANTANO,
+        PLANICIE,
+        TERREO,
+        DIRECOES_PANTANO,
+        NORTE_PANTANO,
+        SUL_PANTANO,
+        LESTE_PANTANO,
+        OESTE_PANTANO,
+        NORTE_PLANICIE,
+        SUL_PLANICIE,
+        LESTE_PLANICIE,
+        OESTE_PLANICIE,
+        DIRECOES_PLANICIE,
+        PRIMEIRO_ANDAR,
+        SEGUNDO_ANDAR,
+        SALA_REI,
+        ARENA
+    };
+
+    enum EstadoJogo estado_atual = MENU_PRINCIPAL;
+
+    //cria o protagonista
+    CHC prtg;
+    prtg.HP = 20;
+    prtg.STR = 5;
+    prtg.INT = 5;
+    prtg.DEX = 10;
+    prtg.vivo = true;
+
+    //gerais
+    int stop = 0;
+    int espera = 500;
+    int mouseX, mouseY;
+    int red = 255;
+    int blue = 255;
+    int green = 255;
+    SDL_Event evt;
+    int aux_carregar = 0;
+
+    while(stop == 0){
+        Uint32 antes = SDL_GetTicks();
+
+        // Sempre esconde todos os textos no início do loop
+        esconderTodosOsTextos(listaTextos);
+
+        // Controle de visibilidade baseado no estado do jogo
+        if(estado_atual == MENU_PRINCIPAL){
+            setTextVisibilidade(listaTextos, "menu_iniciar", true);
+            setTextVisibilidade(listaTextos, "menu_sair", true);
+            setTextVisibilidade(listaTextos, "titulo", true);
+        }
+        else if(estado_atual == TELA_CARREGAMENTO){
+            setTextVisibilidade(listaTextos, "carregamento", true);
+        }
+        else if(estado_atual == VILA){
+            setTextVisibilidade(listaTextos, "vila_loja", true);
+            setTextVisibilidade(listaTextos, "vila_arena", true);
+            setTextVisibilidade(listaTextos, "vila_mapa", true);
+        }
+        else if(estado_atual == PANTANO || estado_atual == PLANICIE){
+            setTextVisibilidade(listaTextos, "regioes_text", true);
+            setTextVisibilidade(listaTextos, "mapa_text", true);
+        }
+        else if(estado_atual == TERREO){
+            setTextVisibilidade(listaTextos, "primeiro_andar", true);
+            setTextVisibilidade(listaTextos, "segundo_andar", true);
+            setTextVisibilidade(listaTextos, "sala_rei", true);
+            setTextVisibilidade(listaTextos, "mapa_text", true);
+        }
+        else if(estado_atual == PRIMEIRO_ANDAR){
+            setTextVisibilidade(listaTextos, "terreo_text", true);
+            setTextVisibilidade(listaTextos, "segundo_andar", true);
+            setTextVisibilidade(listaTextos, "sala_rei", true);
+            setTextVisibilidade(listaTextos, "mapa_text", true);
+        }
+        else if(estado_atual == SEGUNDO_ANDAR){
+            setTextVisibilidade(listaTextos, "terreo_text", true);
+            setTextVisibilidade(listaTextos, "primeiro_andar", true);
+            setTextVisibilidade(listaTextos, "sala_rei", true);
+            setTextVisibilidade(listaTextos, "mapa_text", true);
+        }
+        else if(estado_atual == SALA_REI){
+            setTextVisibilidade(listaTextos, "terreo_text", true);
+            setTextVisibilidade(listaTextos, "primeiro_andar", true);
+            setTextVisibilidade(listaTextos, "segundo_andar", true);
+            setTextVisibilidade(listaTextos, "mapa_text", true);
+        }
+        else if(estado_atual == ARENA && em_batalha){
+            setTextVisibilidade(listaTextos, "btn_atacar", true);
+            setTextVisibilidade(listaTextos, "btn_bolsa", true);
+            setTextVisibilidade(listaTextos, "btn_fugir", true);
+            setTextVisibilidade(listaTextos, "mensagem_batalha", true);
+        }
+
+        int isevt = SDL_WaitEventTimeout(&evt, espera);
+
+        if(isevt){
+            espera -= (SDL_GetTicks() - antes);
+            if(evt.type == SDL_KEYDOWN){
+                switch(evt.key.keysym.sym){
+                    case SDLK_ESCAPE:
+                        stop++;
+                        break;
+                    case SDLK_UP:
+                        r.y -= 10;
+                        break;
+                    case SDLK_DOWN:
+                        r.y += 10;
+                        break;
+                    case SDLK_LEFT:
+                        r.x -= 10;
+                        break;
+                    case SDLK_RIGHT:
+                        r.x += 10;
+                        break;
+                }
+            }
+            else if(evt.type == SDL_QUIT){
+                stop++;
+            }
+
+            if(evt.type == SDL_MOUSEBUTTONDOWN){
+                SDL_GetMouseState(&mouseX, &mouseY);
+
+                //sistema de batalha
+                if(estado_atual == ARENA && em_batalha){
+                    //botao atacar
+                    if(mouseX >= btn_atacar.x && mouseX <= btn_atacar.x + btn_atacar.w && mouseY >= btn_atacar.y && mouseY <= btn_atacar.y + btn_atacar.h){
+                        turno_atual++;
+
+                        if(turno_atual % 2 == 1){
+                            //turno do jogador
+                            ataqueJogador(&prtg, &inimigo_atual);
+                        }
+                        else{
+                            //turno do inimigo
+                            ataqueInimigo(&prtg, &inimigo_atual);
+                        }
+
+                        //atualiza o texto da batalha
+                        updateText(listaTextos, ren, fnt, "mensagem_batalha", buffer_mensagem, corTexto);
+
+                        //verifica se inimigo ainda está vivo para contra-atacar
+                        if(inimigo_atual.vivo && prtg.vivo){
+                            ataqueInimigo(&prtg, &inimigo_atual);
+                            updateText(listaTextos, ren, fnt, "mensagem_batalha", buffer_mensagem, corTexto);
+                        }
+
+                        //verifica fim da batalha
+                        if(!inimigo_atual.vivo || !prtg.vivo){
+                            if(!inimigo_atual.vivo){
+                                strcpy(buffer_mensagem, "Vitoria! Inimigo derrotado!");
+                                //volta para a vila após vencer
+                                em_batalha = false;
+                                estado_atual = VILA;
+                                definirVisibilidadeImagem(listaimagens, "Arena", false);
+                                definirVisibilidadeImagem(listaimagens, "guerreiro_da_Arena", false);
+                                definirVisibilidadeImagem(listaimagens, "Vila", true);
+                                //reativa o botão da arena na vila
+                                cfm_click_ri1 = true;
+                                blck_ri1_view = true;
+                            }
+                            else{
+                                strcpy(buffer_mensagem, "Derrota! Voce foi morto!");
+                                //fecha jogo se morrer
+                                stop++;
+                            }
+                            updateText(listaTextos, ren, fnt, "mensagem_batalha", buffer_mensagem, corTexto);
+                        }
+                    }
+                    //botao bolsa
+                    else if(mouseX >= btn_bolsa.x && mouseX <= btn_bolsa.x + btn_bolsa.w && mouseY >= btn_bolsa.y && mouseY <= btn_bolsa.y + btn_bolsa.h){
+                        strcpy(buffer_mensagem, "Bolsa Vazia!");
+                        updateText(listaTextos, ren, fnt, "mensagem_batalha", buffer_mensagem, corTexto);
+                    }
+                    //botao fugir
+                    else if(mouseX >= btn_fugir.x && mouseX <= btn_fugir.x + btn_fugir.w && mouseY >= btn_fugir.y && mouseY <= btn_fugir.y + btn_fugir.h){
+                        strcpy(buffer_mensagem, "Voce fugiu da batalha!");
+                        updateText(listaTextos, ren, fnt, "mensagem_batalha", buffer_mensagem, corTexto);
+                        SDL_Delay(1500);
+                        em_batalha = false;
+                        estado_atual = VILA;
+                        definirVisibilidadeImagem(listaimagens, "Arena", false);
+                        definirVisibilidadeImagem(listaimagens, "guerreiro_da_Arena", false);
+                        definirVisibilidadeImagem(listaimagens, "Vila", true);
+                        //reativa o botão da arena na vila
+                        cfm_click_ri1 = true;
+                        blck_ri1_view = true;
+                    }
+                }
+
+                //click em r (INICIAR)
+                if(cfm_click1 == true){
+                    if(mouseX >= r.x && mouseX <= r.x + r.w && mouseY >= r.y && mouseY <= r.y + r.h){
+                        estado_atual = TELA_CARREGAMENTO;
+                        printf("\nposição X r2:%d\n", r2.x);
+                        printf("\nposição Y r2:%d\n", r2.y);
+                        definirVisibilidadeImagem(listaimagens, "Menu_Principal", false);
+                        definirVisibilidadeImagem(listaimagens, "Tela_de_Carregamento", true);
+                        blck1_view = false;
+                        cfm_click1 = false;
+                        blck2_view = false;
+                        cfm_click2 = false;
+                        blck3_view = false;
+                        cfm_click3 = false;
+                    }
+                }
+
+                //click em r2 (SAIR)
+                if(cfm_click2 == true){
+                    if(mouseX >= r2.x && mouseX <= r2.x + r2.w && mouseY >= r2.y && mouseY <= r2.y + r2.h){
+                        stop++;
+                    }
+                }
+
+                //click r3 (área clicável da vila)
+                if(cfm_click3 == true){
+                    if(mouseX >= r3.x && mouseX <= r3.x + r3.w && mouseY >= r3.y && mouseY <= r3.y + r3.h){
+                        estado_atual = PANTANO;
+                        definirVisibilidadeImagem(listaimagens, "Vila", false);
+                        definirVisibilidadeImagem(listaimagens, "Pantano", true);
+                    }
+                }
+
+                //click no botão MAPA na vila
+                if(estado_atual == VILA && mouseX >= 700 && mouseX <= 800 && mouseY >= 567 && mouseY <= 600){
+                    estado_atual = MAPA;
+                    definirVisibilidadeImagem(listaimagens, "Vila", false);
+                    definirVisibilidadeImagem(listaimagens, "Mapa", true);
+                }
+
+                //ir para vila a partir do mapa
+                if(estado_atual == MAPA && mouseX >= 0 && mouseX <= 399 && mouseY >= 0 && mouseY <= 299){
+                    estado_atual = VILA;
+                    definirVisibilidadeImagem(listaimagens, "Mapa", false);
+                    definirVisibilidadeImagem(listaimagens, "Vila", true);
+                }
+
+                //ir para pantano a partir do mapa
+                if(estado_atual == MAPA && mouseX >= 0 && mouseX <= 399 && mouseY >= 301 && mouseY <= 600){
+                    estado_atual = PANTANO;
+                    definirVisibilidadeImagem(listaimagens, "Mapa", false);
+                    definirVisibilidadeImagem(listaimagens, "Pantano", true);
+                    blck5_view = true;
+                }
+
+                //ir para planicie a partir do mapa
+                if(estado_atual == MAPA && mouseX >= 401 && mouseX <= 800 && mouseY >= 0 && mouseY <= 299){
+                    estado_atual = PLANICIE;
+                    definirVisibilidadeImagem(listaimagens, "Mapa", false);
+                    definirVisibilidadeImagem(listaimagens, "Planicie", true);
+                    blck5_view = true;
+                }
+
+                //ir para terreo a partir do mapa
+                if(estado_atual == MAPA && mouseX >= 401 && mouseX <= 800 && mouseY >= 301 && mouseY <= 600){
+                    estado_atual = TERREO;
+                    definirVisibilidadeImagem(listaimagens, "Mapa", false);
+                    definirVisibilidadeImagem(listaimagens, "Terreo", true);
+                    blck6_view = true;
+                }
+
+                //voltar para mapa a partir de pantano/planicie
+                if((estado_atual == PANTANO || estado_atual == PLANICIE) && mouseX >= 640 && mouseX <= 800 && mouseY >= 566 && mouseY <= 600){
+                    estado_atual = MAPA;
+                    definirVisibilidadeImagem(listaimagens, "Pantano", false);
+                    definirVisibilidadeImagem(listaimagens, "Planicie", false);
+                    definirVisibilidadeImagem(listaimagens, "Mapa", true);
+                    blck5_view = false;
+                }
+
+                //abrir direções no pantano
+                if(estado_atual == PANTANO && mouseX >= 640 && mouseX <= 800 && mouseY >= 530 && mouseY <= 564){
+                    estado_atual = DIRECOES_PANTANO;
+                    definirVisibilidadeImagem(listaimagens, "Pantano", false);
+                    definirVisibilidadeImagem(listaimagens, "Direcoes", true);
+                    blck5_view = false;
+                }
+
+                //abrir direções na planicie
+                if(estado_atual == PLANICIE && mouseX >= 640 && mouseX <= 800 && mouseY >= 530 && mouseY <= 564){
+                    estado_atual = DIRECOES_PLANICIE;
+                    definirVisibilidadeImagem(listaimagens, "Planicie", false);
+                    definirVisibilidadeImagem(listaimagens, "Direcoes", true);
+                    blck5_view = false;
+                }
+
+                //no terreo
+                if(estado_atual == TERREO){
+                    //clique no mapa
+                    if(mouseX >= 540 && mouseX <= 800 && mouseY >= 565 && mouseY <= 590){
+                        estado_atual = MAPA;
+                        definirVisibilidadeImagem(listaimagens, "Terreo", false);
+                        definirVisibilidadeImagem(listaimagens, "Mapa", true);
+                        blck6_view = false;
+                    }
+                    //clique na sala do rei
+                    if(mouseX >= 540 && mouseX <= 800 && mouseY >= 535 && mouseY <= 560){
+                        estado_atual = SALA_REI;
+                        definirVisibilidadeImagem(listaimagens, "Terreo", false);
+                        definirVisibilidadeImagem(listaimagens, "SalaRei", true);
+                        mouseX = 0;
+                        mouseY = 0;
+                    }
+                    //clique no segundo andar
+                    if(mouseX >= 540 && mouseX <= 800 && mouseY >= 505 && mouseY <= 530){
+                        estado_atual = SEGUNDO_ANDAR;
+                        definirVisibilidadeImagem(listaimagens, "Terreo", false);
+                        definirVisibilidadeImagem(listaimagens, "SegundoAndar", true);
+                        mouseX = 0;
+                        mouseY = 0;
+                    }
+                    //clique no primeiro andar
+                    if(mouseX >= 540 && mouseX <= 800 && mouseY >= 475 && mouseY <= 500){
+                        estado_atual = PRIMEIRO_ANDAR;
+                        definirVisibilidadeImagem(listaimagens, "Terreo", false);
+                        definirVisibilidadeImagem(listaimagens, "PrimeiroAndar", true);
+                        mouseX = 0;
+                        mouseY = 0;
+                    }
+                }
+
+                //clique em direcoes no pantano
+                if(estado_atual == DIRECOES_PANTANO){
+                    //norte
+                    if(mouseX >= 360 && mouseX <= 460 && mouseY >= 50 && mouseY <= 150){
+                        estado_atual = NORTE_PANTANO;
+                        definirVisibilidadeImagem(listaimagens, "Direcoes_Pantano", true);
+                        definirVisibilidadeImagem(listaimagens, "Direcoes", false);
+                    }
+                    //sul
+                    if(mouseX >= 360 && mouseX <= 460 && mouseY >= 450 && mouseY <= 550){
+                        estado_atual = SUL_PANTANO;
+                        definirVisibilidadeImagem(listaimagens, "Direcoes_Pantano", true);
+                        definirVisibilidadeImagem(listaimagens, "Direcoes", false);
+                    }
+                    //leste
+                    if(mouseX >= 600 && mouseX <= 700 && mouseY >= 250  && mouseY <= 350){
+                        estado_atual = LESTE_PANTANO;
+                        definirVisibilidadeImagem(listaimagens, "Direcoes_Pantano", true);
+                        definirVisibilidadeImagem(listaimagens, "Direcoes", false);
+                    }
+                    //oeste
+                    if(mouseX >= 50 && mouseX <= 150 && mouseY >= 250 && mouseY <= 350){
+                        estado_atual = OESTE_PANTANO;
+                        definirVisibilidadeImagem(listaimagens, "Direcoes_Pantano", true);
+                        definirVisibilidadeImagem(listaimagens, "Direcoes", false);
+                    }
+                }
+
+                //clique em direcoes na planicie
+                if(estado_atual == DIRECOES_PLANICIE){
+                    //norte
+                    if(mouseX >= 360 && mouseX <= 460 && mouseY >= 50 && mouseY <= 150){
+                        estado_atual = NORTE_PLANICIE;
+                        definirVisibilidadeImagem(listaimagens, "Direcoes_Planicie", true);
+                        definirVisibilidadeImagem(listaimagens, "Direcoes", false);
+                    }
+                    //sul
+                    if(mouseX >= 360 && mouseX <= 460 && mouseY >= 450 && mouseY <= 550){
+                        estado_atual = SUL_PLANICIE;
+                        definirVisibilidadeImagem(listaimagens, "Direcoes_Planicie", true);
+                        definirVisibilidadeImagem(listaimagens, "Direcoes", false);
+                    }
+                    //leste
+                    if(mouseX >= 600 && mouseX <= 700 && mouseY >= 250  && mouseY <= 350){
+                        estado_atual = LESTE_PLANICIE;
+                        definirVisibilidadeImagem(listaimagens, "Direcoes_Planicie", true);
+                        definirVisibilidadeImagem(listaimagens, "Direcoes", false);
+                    }
+                    //oeste
+                    if(mouseX >= 50 && mouseX <= 150 && mouseY >= 250 && mouseY <= 350){
+                        estado_atual = OESTE_PLANICIE;
+                        definirVisibilidadeImagem(listaimagens, "Direcoes_Planicie", true);
+                        definirVisibilidadeImagem(listaimagens, "Direcoes", false);
+                    }
+                }
+
+                //no primeiro andar
+                if(estado_atual == PRIMEIRO_ANDAR){
+                    //clique no mapa
+                    if(mouseX >= 540 && mouseX <= 800 && mouseY >= 566 && mouseY <= 600){
+                        estado_atual = MAPA;
+                        definirVisibilidadeImagem(listaimagens, "PrimeiroAndar", false);
+                        definirVisibilidadeImagem(listaimagens, "Mapa", true);
+                        blck6_view = false;
+                    }
+                    //clique na sala do rei
+                    if(mouseX >= 540 && mouseX <= 800 && mouseY >= 536 && mouseY <= 564){
+                        estado_atual = SALA_REI;
+                        definirVisibilidadeImagem(listaimagens, "PrimeiroAndar", false);
+                        definirVisibilidadeImagem(listaimagens, "SalaRei", true);
+                        mouseX = 0;
+                        mouseY = 0;
+                    }
+                    //clique no segundo andar
+                    if(mouseX >= 540 && mouseX <= 800 && mouseY >= 506 && mouseY <=534){
+                        estado_atual = SEGUNDO_ANDAR;
+                        definirVisibilidadeImagem(listaimagens, "PrimeiroAndar", false);
+                        definirVisibilidadeImagem(listaimagens, "SegundoAndar", true);
+                        mouseX = 0;
+                        mouseY = 0;
+                    }
+                    //clique no terreo
+                    if(mouseX >= 540 && mouseX <= 800 && mouseY >= 470 && mouseY <= 504){
+                        estado_atual = TERREO;
+                        definirVisibilidadeImagem(listaimagens, "Terreo", true);
+                        definirVisibilidadeImagem(listaimagens, "PrimeiroAndar", false);
+                        mouseX = 0;
+                        mouseY = 0;
+                    }
+                }
+
+                //no segundo andar
+                if(estado_atual == SEGUNDO_ANDAR){
+                    //clique no mapa
+                    if(mouseX >= 540 && mouseX <= 800 && mouseY >= 566 && mouseY <= 600){
+                        estado_atual = MAPA;
+                        definirVisibilidadeImagem(listaimagens, "SegundoAndar", false);
+                        definirVisibilidadeImagem(listaimagens, "Mapa", true);
+                        blck6_view = false;
+                    }
+                    //clique na sala do rei
+                    if(mouseX >= 540 && mouseX <= 800 && mouseY >= 536 && mouseY <= 564){
+                        estado_atual = SALA_REI;
+                        definirVisibilidadeImagem(listaimagens, "SegundoAndar", false);
+                        definirVisibilidadeImagem(listaimagens, "SalaRei", true);
+                        mouseX = 0;
+                        mouseY = 0;
+                    }
+                    //clique no primeiro andar
+                    if(mouseX >= 540 && mouseX <= 800 && mouseY >= 506 && mouseY <=534){
+                        estado_atual = PRIMEIRO_ANDAR;
+                        definirVisibilidadeImagem(listaimagens, "PrimeiroAndar", true);
+                        definirVisibilidadeImagem(listaimagens, "SegundoAndar", false);
+                        mouseX = 0;
+                        mouseY = 0;
+                    }
+                    //clique no terreo
+                    if(mouseX >= 540 && mouseX <= 800 && mouseY >= 470 && mouseY <= 504){
+                        estado_atual = TERREO;
+                        definirVisibilidadeImagem(listaimagens, "Terreo", true);
+                        definirVisibilidadeImagem(listaimagens, "SegundoAndar", false);
+                        mouseX = 0;
+                        mouseY = 0;
+                    }
+                }
+
+                //na sala do rei
+                if(estado_atual == SALA_REI){
+                    //clique no mapa
+                    if(mouseX >= 540 && mouseX <= 800 && mouseY >= 566 && mouseY <= 600){
+                        estado_atual = MAPA;
+                        definirVisibilidadeImagem(listaimagens, "SalaRei", false);
+                        definirVisibilidadeImagem(listaimagens, "Mapa", true);
+                        blck6_view = false;
+                    }
+                    //clique no segundo andar
+                    if(mouseX >= 540 && mouseX <= 800 && mouseY >= 536 && mouseY <= 564){
+                        estado_atual = SEGUNDO_ANDAR;
+                        definirVisibilidadeImagem(listaimagens, "SegundoAndar", true);
+                        definirVisibilidadeImagem(listaimagens, "SalaRei", false);
+                        mouseX = 0;
+                        mouseY = 0;
+                    }
+                    //clique no primeiro andar
+                    if(mouseX >= 540 && mouseX <= 800 && mouseY >= 506 && mouseY <=534){
+                        estado_atual = PRIMEIRO_ANDAR;
+                        definirVisibilidadeImagem(listaimagens, "PrimeiroAndar", true);
+                        definirVisibilidadeImagem(listaimagens, "SalaRei", false);
+                        mouseX = 0;
+                        mouseY = 0;
+                    }
+                    //clique no terreo
+                    if(mouseX >= 540 && mouseX <= 800 && mouseY >= 470 && mouseY <= 504){
+                        estado_atual = TERREO;
+                        definirVisibilidadeImagem(listaimagens, "Terreo", true);
+                        definirVisibilidadeImagem(listaimagens, "SalaRei", false);
+                        mouseX = 0;
+                        mouseY = 0;
+                    }
+                }
+
+                //click em ri1 (botão da arena)
+                if(cfm_click_ri1 == true){
+                    if(mouseX >= ri1.x && mouseX <= ri1.x + ri1.w && mouseY >= ri1.y && mouseY <= ri1.y + ri1.h){
+                        printf("\nesta clicando\n");
+                        estado_atual = ARENA;
+                        blck_ri1_view = false;
+                        cfm_click_ri1 = false;
+                        definirVisibilidadeImagem(listaimagens, "Vila", false);
+                        definirVisibilidadeImagem(listaimagens, "Arena", true);
+                        definirVisibilidadeImagem(listaimagens, "guerreiro_da_Arena", true);
+                        //inicia batalha aqui
+                        iniciarBatalha(&prtg);
+                        updateText(listaTextos, ren, fnt, "mensagem_batalha", buffer_mensagem, corTexto);
+                        //restaura o HP do jogador se estiver zerado
+                        if(prtg.HP <= 0){
+                            prtg.HP = 20;
+                            prtg.vivo = true;
+                        }
+                    }
+                }
+            }
+        }
+
+        //tela de carregamento
+        if(estado_atual == TELA_CARREGAMENTO){
+            if(aux_carregar > 0){
+                SDL_Delay(1000);
+                estado_atual = VILA;
+                cfm_click_ri1 = true;
+                blck_ri1_view = true;
+                definirVisibilidadeImagem(listaimagens, "Tela_de_Carregamento", false);
+                definirVisibilidadeImagem(listaimagens, "Vila", true);
+            }
+            aux_carregar = 1;
+        }
+        else{
+            espera = 500;
+        }
+
+        if(SDL_HasIntersection(&r, &r2)){
+            printf("\nencostou\n");
+        }
+
+        //renderização abaixo tela
+        SDL_SetRenderDrawColor(ren, red, green, blue, 0x00);
+        SDL_RenderClear(ren);
+
+        //renderiza imagem
+        renderizarImagensVisiveis(listaimagens, ren);
+
+        if(estado_atual == ARENA && em_batalha){
+            //renderiza status do jogador e inimigo
+            char status[100];
+            snprintf(status, sizeof(status), "Seu HP: %d | %s HP: %d", prtg.HP, inimigo_atual.nome, inimigo_atual.HP);
+            TTR status_texto = CarregaTexto(ren, fnt, status, ver);
+
+            if(status_texto.texture){
+                int x_status = (800 - status_texto.largura) / 2;
+                renderTextAt(ren, status_texto, x_status, 350);
+                freeTextTexture(status_texto);
+            }
+
+            //renderiza interface de batalha
+            SDL_SetRenderDrawColor(ren, 50, 50, 50, 200);
+            SDL_RenderFillRect(ren, &btn_atacar);
+            SDL_RenderFillRect(ren, &btn_bolsa);
+            SDL_RenderFillRect(ren, &btn_fugir);
+
+            //bordas dos botoes
+            SDL_SetRenderDrawColor(ren, 255, 255, 255, 255);
+            SDL_RenderDrawRect(ren, &btn_atacar);
+            SDL_RenderDrawRect(ren, &btn_bolsa);
+            SDL_RenderDrawRect(ren, &btn_fugir);
+        }
+
+        //renderiza blocos (se necessário)
+        if(blck1_view == true){
+            SDL_SetRenderDrawColor(ren, 0, 0, blue, 0x00);
+            SDL_RenderFillRect(ren, &r);
+        }
+        if(blck2_view == true){
+            SDL_SetRenderDrawColor(ren, 255, 0, 0, 0);
+            SDL_RenderFillRect(ren, &r2);
+        }
+        if(blck3_view == true){
+            SDL_SetRenderDrawColor(ren, 0, 0, 0, 0x00);
+            SDL_RenderFillRect(ren, &r3);
+        }
+        if(blck4_view == true){
+            SDL_SetRenderDrawColor(ren, 0, 0, 0, 0xFF);
+            SDL_RenderFillRect(ren, &r4);
+        }
+        if(blck5_view == true){
+            SDL_SetRenderDrawColor(ren, 0, 0, 0, 0xFF);
+            SDL_RenderFillRect(ren, &r5);
+        }
+        if(blck6_view == true){
+            SDL_SetRenderDrawColor(ren, 0, 0, 0, 0xFF);
+            SDL_RenderFillRect(ren, &r6);
+        }
+        if(blck_ri1_view == true){
+            SDL_SetRenderDrawColor(ren, 0, 0, 0, 255);
+            SDL_RenderFillRect(ren, &ri1);
+        }
+
+        //renderizando texto
+        RenderizarTodosOsTextosVisiveis(listaTextos, ren);
+
+        SDL_RenderPresent(ren);
+    }
+
+    //limpar imagens
+    liberarListaImagem(listaimagens);
+    freeTextList(listaTextos);
+    TTF_CloseFont(fnt);
+    SDL_DestroyRenderer(ren);
+    SDL_DestroyWindow(win);
+    IMG_Quit();
+    TTF_Quit();
+    SDL_Quit();
+
+    return 0;
+}
