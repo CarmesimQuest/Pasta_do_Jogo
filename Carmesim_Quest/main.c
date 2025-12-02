@@ -421,7 +421,11 @@ typedef enum {
     ESTADO_ARENA,
     ESTADO_TURNO_DO_JOGADOR,
     ESTADO_TURNO_DO_INIMIGO,
-    ESTADO_ROSA_DOS_VENTOS
+    ESTADO_ROSA_DOS_VENTOS_PANTANO,
+    ESTADO_ROSA_DOS_VENTOS_PLANICIE,
+    ESTADO_BOSS_NORTE_PLANICIE,
+    ESTADO_BOSS_SUL_PLANICIE,
+    ESTADO_BOSS_OESTE_PLANICIE,
 
 } EstadoJogo;
 
@@ -568,14 +572,14 @@ void carregarOestePantano() {
 void carregarNortePlanicie() {
     esconderTodasImagens(imagens_globais);
     esconderTodosOsTextos(textos_globais);
-    definirVisibilidadeImagem(imagens_globais, "Planicie", true);
+    definirVisibilidadeImagem(imagens_globais, "Acampamento_Ladroes", true);
     setTextVisibilidade(textos_globais, "mapa_text", true);
 }
 
 void carregarSulPlanicie() {
     esconderTodasImagens(imagens_globais);
     esconderTodosOsTextos(textos_globais);
-    definirVisibilidadeImagem(imagens_globais, "Planicie", true);
+    definirVisibilidadeImagem(imagens_globais, "Acampamento_Cavaleiro", true);
     setTextVisibilidade(textos_globais, "mapa_text", true);
 }
 
@@ -589,7 +593,28 @@ void carregarLestePlanicie() {
 void carregarOestePlanicie() {
     esconderTodasImagens(imagens_globais);
     esconderTodosOsTextos(textos_globais);
-    definirVisibilidadeImagem(imagens_globais, "Planicie", true);
+    definirVisibilidadeImagem(imagens_globais, "Entrada_Caverna", true);
+    setTextVisibilidade(textos_globais, "mapa_text", true);
+}
+
+void carregarBossNortePlanicie() {
+    esconderTodasImagens(imagens_globais);
+    esconderTodosOsTextos(textos_globais);
+    definirVisibilidadeImagem(imagens_globais, "Acampamento_Boss_Ladroes", true);
+    setTextVisibilidade(textos_globais, "mapa_text", true);
+}
+
+void carregarBossSulPlanicie() {
+    esconderTodasImagens(imagens_globais);
+    esconderTodosOsTextos(textos_globais);
+    definirVisibilidadeImagem(imagens_globais, "Acampamento_Boss_Cavaleiro", true);
+    setTextVisibilidade(textos_globais, "mapa_text", true);
+}
+
+void carregarBossOestePlanicie() {
+    esconderTodasImagens(imagens_globais);
+    esconderTodosOsTextos(textos_globais);
+    definirVisibilidadeImagem(imagens_globais, "Interior_Caverna", true);
     setTextVisibilidade(textos_globais, "mapa_text", true);
 }
 
@@ -641,12 +666,15 @@ void mudarEstado(EstadoJogo novo_estado) {
         case ESTADO_SUL_PLANICIE: carregarSulPlanicie(); break;
         case ESTADO_LESTE_PLANICIE: carregarLestePlanicie(); break;
         case ESTADO_OESTE_PLANICIE: carregarOestePlanicie(); break;
+        case ESTADO_BOSS_NORTE_PLANICIE: carregarBossNortePlanicie(); break;
+        case ESTADO_BOSS_SUL_PLANICIE: carregarBossSulPlanicie(); break;
+        case ESTADO_BOSS_OESTE_PLANICIE: carregarBossOestePlanicie(); break;
         case ESTADO_PRIMEIRO_ANDAR: carregarPrimeiroAndar(); break;
         case ESTADO_SEGUNDO_ANDAR: carregarSegundoAndar(); break;
         case ESTADO_SALA_REI: carregarSalaRei(); break;
         case ESTADO_ARENA: carregarArena(); break;
-        case ESTADO_ROSA_DOS_VENTOS: carregarRosaDosVentos(); break;
-
+        case ESTADO_ROSA_DOS_VENTOS_PANTANO: carregarRosaDosVentos(); break;
+	case ESTADO_ROSA_DOS_VENTOS_PLANICIE: carregarRosaDosVentos(); break;
         default: carregarMenu(); break;
     }
 }
@@ -763,6 +791,9 @@ int main (int argc, char* args[])
 
     // Botões da rosa dos ventos
     Botao btnOeste, btnLeste, btnNorte, btnSul;
+    
+    // Botões direções planicie
+    Botao btnEntrarPlanicie;
 
     // Inicializar listas globais
     imagens_globais = criarListaImagens();
@@ -784,6 +815,14 @@ int main (int argc, char* args[])
     adicionarImagem(imagens_globais, criarObjetoImagem("SalaRei.png", ren, 0, 0, 800, 600), "SalaRei");
     adicionarImagem(imagens_globais, criarObjetoImagem("guerreiro_basico_arena.png", ren, 300, 150, 200, 300), "guerreiro_da_Arena");
     adicionarImagem(imagens_globais, criarObjetoImagem("Carregamento.png", ren, 0, 0, 800, 600), "Tela_de_Carregamento");
+    adicionarImagem(imagens_globais, criarObjetoImagem("Acampamento_Boss_Cavaleiro.png", ren, 0, 0, 800, 600), "Acampamento_Boss_Cavaleiro");
+    adicionarImagem(imagens_globais, criarObjetoImagem("Acampamento_Boss_Ladroes.png", ren, 0, 0, 800, 600), "Acampamento_Boss_Ladroes");
+    adicionarImagem(imagens_globais, criarObjetoImagem("Acampamento_Cavaleiro.png", ren, 0, 0, 800, 600), "Acampamento_Cavaleiro");
+    adicionarImagem(imagens_globais, criarObjetoImagem("acampamento_ladroes.png", ren, 0, 0, 800, 600), "Acampamento_Ladroes");
+    adicionarImagem(imagens_globais, criarObjetoImagem("Boss_Cavaleiro.png", ren, 0, 0, 800, 600), "Boss_Cavaleiro");
+    adicionarImagem(imagens_globais, criarObjetoImagem("Boss_Ladrao.png", ren, 300, 150, 200, 300), "Boss_Ladrao");
+    adicionarImagem(imagens_globais, criarObjetoImagem("Entrada_Caverna.png", ren, 0, 0, 800, 600), "Entrada_Caverna");
+    adicionarImagem(imagens_globais, criarObjetoImagem("Interior_Caverna.png", ren, 0, 0, 800, 600), "Interior_Caverna");
 
     // Adicionar TODOS os textos (exemplo)
     adicionartexto(textos_globais, ren, fnt, "CARMESIM QUEST", ver, 280, 10, "titulo");
@@ -828,8 +867,14 @@ int main (int argc, char* args[])
     btnVoltarCastelo = criarBotao(140, 500, 150, 40, "VOLTAR", corVermelho, corBorda, corTextoBtn);
 
     // Rosa dos ventos
-    btnOeste = criarBotao(0, 200, 200, 100, "", corTransparente, corTransparente, corTransparente);
-
+    btnOeste = criarBotao(25, 250, 150, 100, "", corTransparente, corTransparente, corTransparente);
+    btnLeste = criarBotao(600, 250, 150, 100, "", corTransparente, corTransparente, corTransparente);
+    btnNorte = criarBotao(300, 25, 200, 100, "", corTransparente, corTransparente, corTransparente);
+    btnSul = criarBotao(300, 475, 200, 100, "", corTransparente, corTransparente, corTransparente);
+    
+    //Direções Planície
+    btnEntrarPlanicie = criarBotao(10, 560, 150, 40, "ENTRAR", corVermelho, corBorda, corTextoBtn);
+    
     // Iniciar no menu
     mudarEstado(ESTADO_MENU_PRINCIPAL);
 
@@ -915,7 +960,7 @@ int main (int argc, char* args[])
             // Pantano
             if(estado_atual == ESTADO_PANTANO) {
                 if(cliqueBotao(btnRegioesPantano, mouseX, mouseY)) {
-                    mudarEstado(ESTADO_ROSA_DOS_VENTOS);
+                    mudarEstado(ESTADO_ROSA_DOS_VENTOS_PANTANO);
                 }
                 if(cliqueBotao(btnVoltarPantano, mouseX, mouseY)) {
                     mudarEstado(ESTADO_MAPA);
@@ -932,10 +977,61 @@ int main (int argc, char* args[])
             // Planície
             if(estado_atual == ESTADO_PLANICIE) {
                 if(cliqueBotao(btnRegioesPlanicie, mouseX, mouseY)) {
-                    mudarEstado(ESTADO_ROSA_DOS_VENTOS);
+                    mudarEstado(ESTADO_ROSA_DOS_VENTOS_PLANICIE);
                 }
                 if(cliqueBotao(btnVoltarPlanicie, mouseX, mouseY)) {
                     mudarEstado(ESTADO_MAPA);
+                }
+            }
+            
+            // Norte Planície
+            if(estado_atual == ESTADO_NORTE_PLANICIE) {
+                if(cliqueBotao(btnEntrarPlanicie, mouseX, mouseY)) {
+                    mudarEstado(ESTADO_BOSS_NORTE_PLANICIE);
+                }
+                if(cliqueBotao(btnVoltarPlanicie, mouseX, mouseY)) {
+                    mudarEstado(ESTADO_PLANICIE);
+                }
+            }
+            
+            // Sul Planície
+            if(estado_atual == ESTADO_SUL_PLANICIE) {
+                if(cliqueBotao(btnEntrarPlanicie, mouseX, mouseY)) {
+                    mudarEstado(ESTADO_BOSS_SUL_PLANICIE);
+                }
+                if(cliqueBotao(btnVoltarPlanicie, mouseX, mouseY)) {
+                    mudarEstado(ESTADO_PLANICIE);
+                }
+            }
+            
+            // Oeste Planície
+            if(estado_atual == ESTADO_OESTE_PLANICIE) {
+                if(cliqueBotao(btnEntrarPlanicie, mouseX, mouseY)) {
+                    mudarEstado(ESTADO_BOSS_OESTE_PLANICIE);
+                }
+                if(cliqueBotao(btnVoltarPlanicie, mouseX, mouseY)) {
+                    mudarEstado(ESTADO_PLANICIE);
+                }
+            }
+            
+            // Boss Norte Planície
+            if(estado_atual == ESTADO_BOSS_NORTE_PLANICIE) {
+                if(cliqueBotao(btnVoltarPlanicie, mouseX, mouseY)) {
+                    mudarEstado(ESTADO_NORTE_PLANICIE);
+                }
+            }
+            
+            // Boss Sul Planície
+            if(estado_atual == ESTADO_BOSS_SUL_PLANICIE) {
+                if(cliqueBotao(btnVoltarPlanicie, mouseX, mouseY)) {
+                    mudarEstado(ESTADO_SUL_PLANICIE);
+                }
+            }
+            
+            // Boss Oeste Planície
+            if(estado_atual == ESTADO_BOSS_OESTE_PLANICIE) {
+                if(cliqueBotao(btnVoltarPlanicie, mouseX, mouseY)) {
+                    mudarEstado(ESTADO_OESTE_PLANICIE);
                 }
             }
 
@@ -1003,10 +1099,35 @@ int main (int argc, char* args[])
                     }
                 }
 
-            //Rosa dos ventos
-            if(estado_atual == ESTADO_ROSA_DOS_VENTOS){
+            //Rosa dos ventos - Pântano
+            if(estado_atual == ESTADO_ROSA_DOS_VENTOS_PANTANO){
                 if(cliqueBotao(btnOeste, mouseX, mouseY)){
                     mudarEstado(ESTADO_OESTE_PANTANO);
+                }
+                if(cliqueBotao(btnLeste, mouseX, mouseY)){
+                    mudarEstado(ESTADO_LESTE_PANTANO);
+                }
+                if(cliqueBotao(btnNorte, mouseX, mouseY)){
+                    mudarEstado(ESTADO_NORTE_PANTANO);
+                }
+                if(cliqueBotao(btnSul, mouseX, mouseY)){
+                    mudarEstado(ESTADO_SUL_PANTANO);
+                }
+            }
+            
+            //Rosa dos ventos - Planície
+            if(estado_atual == ESTADO_ROSA_DOS_VENTOS_PLANICIE){
+                if(cliqueBotao(btnOeste, mouseX, mouseY)){
+                    mudarEstado(ESTADO_OESTE_PLANICIE);
+                }
+                if(cliqueBotao(btnLeste, mouseX, mouseY)){
+                    mudarEstado(ESTADO_LESTE_PLANICIE);
+                }
+                if(cliqueBotao(btnNorte, mouseX, mouseY)){
+                    mudarEstado(ESTADO_NORTE_PLANICIE);
+                }
+                if(cliqueBotao(btnSul, mouseX, mouseY)){
+                    mudarEstado(ESTADO_SUL_PLANICIE);
                 }
             }
 
@@ -1117,6 +1238,39 @@ int main (int argc, char* args[])
             renderizarBotao(ren, btnRegioesPlanicie, fnt);
             renderizarBotao(ren, btnVoltarPlanicie, fnt);
         }
+        
+        // Norte Planície
+        if(estado_atual == ESTADO_NORTE_PLANICIE) {
+            renderizarBotao(ren, btnEntrarPlanicie, fnt);
+            renderizarBotao(ren, btnVoltarPlanicie, fnt);
+        }
+        
+        // Sul Planície
+        if(estado_atual == ESTADO_SUL_PLANICIE) {
+            renderizarBotao(ren, btnEntrarPlanicie, fnt);
+            renderizarBotao(ren, btnVoltarPlanicie, fnt);
+        }
+        
+        // Oeste Planície
+        if(estado_atual == ESTADO_OESTE_PLANICIE) {
+            renderizarBotao(ren, btnEntrarPlanicie, fnt);
+            renderizarBotao(ren, btnVoltarPlanicie, fnt);
+        }
+        
+        // Boss Norte Planície
+        if(estado_atual == ESTADO_BOSS_NORTE_PLANICIE) {
+            renderizarBotao(ren, btnVoltarPlanicie, fnt);
+        }
+        
+        // Boss Sul Planície
+        if(estado_atual == ESTADO_BOSS_SUL_PLANICIE) {
+            renderizarBotao(ren, btnVoltarPlanicie, fnt);
+        }
+        
+        // Boss Oeste Planície
+        if(estado_atual == ESTADO_BOSS_OESTE_PLANICIE) {
+            renderizarBotao(ren, btnVoltarPlanicie, fnt);
+        }
 
         // Castelo - Terreo
         if(estado_atual == ESTADO_TERREO) {
@@ -1156,7 +1310,15 @@ int main (int argc, char* args[])
             renderizarBotao(ren, btnBolsa, fnt);
             renderizarBotao(ren, btnFugir, fnt);
         }
-
+        
+         // Rosa dos ventos
+        if(estado_atual == ESTADO_ROSA_DOS_VENTOS_PLANICIE || estado_atual == ESTADO_ROSA_DOS_VENTOS_PANTANO) {
+            renderizarBotao(ren, btnOeste, fnt);
+            renderizarBotao(ren, btnLeste, fnt);
+            renderizarBotao(ren, btnNorte, fnt);
+            renderizarBotao(ren, btnSul, fnt);
+        }
+            
         SDL_RenderPresent(ren);
     }
 
