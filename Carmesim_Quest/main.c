@@ -426,6 +426,9 @@ typedef enum {
     ESTADO_BOSS_NORTE_PLANICIE,
     ESTADO_BOSS_SUL_PLANICIE,
     ESTADO_BOSS_OESTE_PLANICIE,
+    ESTADO_BOSS_NORTE_PANTANO,
+    ESTADO_BOSS_SUL_PANTANO,
+    ESTADO_BOSS_OESTE_PANTANO
 
 } EstadoJogo;
 
@@ -544,14 +547,14 @@ void carregarSalaRei() {
 void carregarNortePantano() {
     esconderTodasImagens(imagens_globais);
     esconderTodosOsTextos(textos_globais);
-    definirVisibilidadeImagem(imagens_globais, "Pantano", true);
+    definirVisibilidadeImagem(imagens_globais, "Casa_Bruxa_Pantano", true);
     setTextVisibilidade(textos_globais, "mapa_text", true);
 }
 
 void carregarSulPantano() {
     esconderTodasImagens(imagens_globais);
     esconderTodosOsTextos(textos_globais);
-    definirVisibilidadeImagem(imagens_globais, "Pantano", true);
+    definirVisibilidadeImagem(imagens_globais, "Fantasmas_Pantano", true);
     setTextVisibilidade(textos_globais, "mapa_text", true);
 }
 
@@ -565,7 +568,7 @@ void carregarLestePantano() {
 void carregarOestePantano() {
     esconderTodasImagens(imagens_globais);
     esconderTodosOsTextos(textos_globais);
-    definirVisibilidadeImagem(imagens_globais, "Oeste_pantano", true);
+    definirVisibilidadeImagem(imagens_globais, "Lago_Monstro_Pantano", true);
     setTextVisibilidade(textos_globais, "", true);
 }
 
@@ -601,6 +604,7 @@ void carregarBossNortePlanicie() {
     esconderTodasImagens(imagens_globais);
     esconderTodosOsTextos(textos_globais);
     definirVisibilidadeImagem(imagens_globais, "Acampamento_Boss_Ladroes", true);
+    definirVisibilidadeImagem(imagens_globais, "Boss_Ladrao", true);
     setTextVisibilidade(textos_globais, "mapa_text", true);
 }
 
@@ -608,6 +612,7 @@ void carregarBossSulPlanicie() {
     esconderTodasImagens(imagens_globais);
     esconderTodosOsTextos(textos_globais);
     definirVisibilidadeImagem(imagens_globais, "Acampamento_Boss_Cavaleiro", true);
+    definirVisibilidadeImagem(imagens_globais, "Boss_Cavaleiro", true);
     setTextVisibilidade(textos_globais, "mapa_text", true);
 }
 
@@ -615,6 +620,31 @@ void carregarBossOestePlanicie() {
     esconderTodasImagens(imagens_globais);
     esconderTodosOsTextos(textos_globais);
     definirVisibilidadeImagem(imagens_globais, "Interior_Caverna", true);
+    definirVisibilidadeImagem(imagens_globais, "Boss_Caverna", true);
+    setTextVisibilidade(textos_globais, "mapa_text", true);
+}
+
+void carregarBossNortePantano() {
+    esconderTodasImagens(imagens_globais);
+    esconderTodosOsTextos(textos_globais);
+    definirVisibilidadeImagem(imagens_globais, "Interior_Casa_Bruxa_Pantano", true);
+    definirVisibilidadeImagem(imagens_globais, "Boss_Bruxa_Pantano", true);
+    setTextVisibilidade(textos_globais, "mapa_text", true);
+}
+
+void carregarBossSulPantano() {
+    esconderTodasImagens(imagens_globais);
+    esconderTodosOsTextos(textos_globais);
+    definirVisibilidadeImagem(imagens_globais, "Boss_Fantasma_Pantano", true);
+    definirVisibilidadeImagem(imagens_globais, "Rei_Fantasma", true);
+    setTextVisibilidade(textos_globais, "mapa_text", true);
+}
+
+void carregarBossOestePantano() {
+    esconderTodasImagens(imagens_globais);
+    esconderTodosOsTextos(textos_globais);
+    definirVisibilidadeImagem(imagens_globais, "Boss_Monstro_Pantano", true);
+    definirVisibilidadeImagem(imagens_globais, "Monstro_Pantano", true);
     setTextVisibilidade(textos_globais, "mapa_text", true);
 }
 
@@ -669,6 +699,9 @@ void mudarEstado(EstadoJogo novo_estado) {
         case ESTADO_BOSS_NORTE_PLANICIE: carregarBossNortePlanicie(); break;
         case ESTADO_BOSS_SUL_PLANICIE: carregarBossSulPlanicie(); break;
         case ESTADO_BOSS_OESTE_PLANICIE: carregarBossOestePlanicie(); break;
+        case ESTADO_BOSS_NORTE_PANTANO: carregarBossNortePantano(); break;
+        case ESTADO_BOSS_SUL_PANTANO: carregarBossSulPantano(); break;
+        case ESTADO_BOSS_OESTE_PANTANO: carregarBossOestePantano(); break;
         case ESTADO_PRIMEIRO_ANDAR: carregarPrimeiroAndar(); break;
         case ESTADO_SEGUNDO_ANDAR: carregarSegundoAndar(); break;
         case ESTADO_SALA_REI: carregarSalaRei(); break;
@@ -794,6 +827,10 @@ int main (int argc, char* args[])
     
     // Botões direções planicie
     Botao btnEntrarPlanicie;
+    
+    // Botões direções pantano
+    Botao btnEntrarPantano;
+
 
     // Inicializar listas globais
     imagens_globais = criarListaImagens();
@@ -819,10 +856,20 @@ int main (int argc, char* args[])
     adicionarImagem(imagens_globais, criarObjetoImagem("Acampamento_Boss_Ladroes.png", ren, 0, 0, 800, 600), "Acampamento_Boss_Ladroes");
     adicionarImagem(imagens_globais, criarObjetoImagem("Acampamento_Cavaleiro.png", ren, 0, 0, 800, 600), "Acampamento_Cavaleiro");
     adicionarImagem(imagens_globais, criarObjetoImagem("acampamento_ladroes.png", ren, 0, 0, 800, 600), "Acampamento_Ladroes");
-    adicionarImagem(imagens_globais, criarObjetoImagem("Boss_Cavaleiro.png", ren, 0, 0, 800, 600), "Boss_Cavaleiro");
+    adicionarImagem(imagens_globais, criarObjetoImagem("Boss_Cavaleiro.png", ren, 300, 150, 200, 300), "Boss_Cavaleiro");
     adicionarImagem(imagens_globais, criarObjetoImagem("Boss_Ladrao.png", ren, 300, 150, 200, 300), "Boss_Ladrao");
+    adicionarImagem(imagens_globais, criarObjetoImagem("Boss_Caverna.png", ren, 300, 150, 200, 300), "Boss_Caverna");
     adicionarImagem(imagens_globais, criarObjetoImagem("Entrada_Caverna.png", ren, 0, 0, 800, 600), "Entrada_Caverna");
     adicionarImagem(imagens_globais, criarObjetoImagem("Interior_Caverna.png", ren, 0, 0, 800, 600), "Interior_Caverna");
+    adicionarImagem(imagens_globais, criarObjetoImagem("Boss_Bruxa_Pantano.png", ren, 300, 150, 200, 300), "Boss_Bruxa_Pantano");
+    adicionarImagem(imagens_globais, criarObjetoImagem("Boss_Fantasma_Pantano.png", ren, 0, 0, 800, 600), "Boss_Fantasma_Pantano");
+    adicionarImagem(imagens_globais, criarObjetoImagem("Boss_Monstro_Pantano.png", ren, 0, 0, 800, 600), "Boss_Monstro_Pantano");
+    adicionarImagem(imagens_globais, criarObjetoImagem("Casa_Bruxa_Pantano.png", ren, 0, 0, 800, 600), "Casa_Bruxa_Pantano");
+    adicionarImagem(imagens_globais, criarObjetoImagem("Fantasmas_Pantano.png", ren, 0, 0, 800, 600), "Fantasmas_Pantano");
+    adicionarImagem(imagens_globais, criarObjetoImagem("Interior_Casa_Bruxa_Pantano.png", ren, 0, 0, 800, 600), "Interior_Casa_Bruxa_Pantano");
+    adicionarImagem(imagens_globais, criarObjetoImagem("Lago_Monstro_Pantano.png", ren, 0, 0, 800, 600), "Lago_Monstro_Pantano");
+    adicionarImagem(imagens_globais, criarObjetoImagem("Monstro_Pantano.png", ren, 300, 150, 200, 300), "Monstro_Pantano");
+    adicionarImagem(imagens_globais, criarObjetoImagem("Rei_Fantasma.png", ren, 300, 150, 200, 300), "Rei_Fantasma");
 
     // Adicionar TODOS os textos (exemplo)
     adicionartexto(textos_globais, ren, fnt, "CARMESIM QUEST", ver, 280, 10, "titulo");
@@ -874,6 +921,9 @@ int main (int argc, char* args[])
     
     //Direções Planície
     btnEntrarPlanicie = criarBotao(10, 560, 150, 40, "ENTRAR", corVermelho, corBorda, corTextoBtn);
+    
+    //Direções Pantano
+    btnEntrarPantano = criarBotao(10, 560, 150, 40, "ENTRAR", corVerde, corBorda, corTextoBtn);
     
     // Iniciar no menu
     mudarEstado(ESTADO_MENU_PRINCIPAL);
@@ -1032,6 +1082,57 @@ int main (int argc, char* args[])
             if(estado_atual == ESTADO_BOSS_OESTE_PLANICIE) {
                 if(cliqueBotao(btnVoltarPlanicie, mouseX, mouseY)) {
                     mudarEstado(ESTADO_OESTE_PLANICIE);
+                }
+            }
+            
+            // Norte Pantano
+            if(estado_atual == ESTADO_NORTE_PANTANO) {
+                if(cliqueBotao(btnEntrarPantano, mouseX, mouseY)) {
+                    mudarEstado(ESTADO_BOSS_NORTE_PANTANO);
+                }
+                if(cliqueBotao(btnVoltarPantano, mouseX, mouseY)) {
+                    mudarEstado(ESTADO_PANTANO);
+                }
+            }
+            
+            // Sul Pantano
+            if(estado_atual == ESTADO_SUL_PANTANO) {
+                if(cliqueBotao(btnEntrarPantano, mouseX, mouseY)) {
+                    mudarEstado(ESTADO_BOSS_SUL_PANTANO);
+                }
+                if(cliqueBotao(btnVoltarPantano, mouseX, mouseY)) {
+                    mudarEstado(ESTADO_PANTANO);
+                }
+            }
+            
+            // Oeste Planície
+            if(estado_atual == ESTADO_OESTE_PANTANO) {
+                if(cliqueBotao(btnEntrarPantano, mouseX, mouseY)) {
+                    mudarEstado(ESTADO_BOSS_OESTE_PANTANO);
+                }
+                if(cliqueBotao(btnVoltarPantano, mouseX, mouseY)) {
+                    mudarEstado(ESTADO_PANTANO);
+                }
+            }
+            
+            // Boss Norte Pantano
+            if(estado_atual == ESTADO_BOSS_NORTE_PANTANO) {
+                if(cliqueBotao(btnVoltarPantano, mouseX, mouseY)) {
+                    mudarEstado(ESTADO_NORTE_PANTANO);
+                }
+            }
+            
+            // Boss Sul Pantano
+            if(estado_atual == ESTADO_BOSS_SUL_PANTANO) {
+                if(cliqueBotao(btnVoltarPantano, mouseX, mouseY)) {
+                    mudarEstado(ESTADO_SUL_PANTANO);
+                }
+            }
+            
+            // Boss Oeste Pantano
+            if(estado_atual == ESTADO_BOSS_OESTE_PANTANO) {
+                if(cliqueBotao(btnVoltarPantano, mouseX, mouseY)) {
+                    mudarEstado(ESTADO_OESTE_PANTANO);
                 }
             }
 
@@ -1270,6 +1371,39 @@ int main (int argc, char* args[])
         // Boss Oeste Planície
         if(estado_atual == ESTADO_BOSS_OESTE_PLANICIE) {
             renderizarBotao(ren, btnVoltarPlanicie, fnt);
+        }
+        
+         // Norte Pantano
+        if(estado_atual == ESTADO_NORTE_PANTANO) {
+            renderizarBotao(ren, btnEntrarPantano, fnt);
+            renderizarBotao(ren, btnVoltarPantano, fnt);
+        }
+        
+        // Sul Pantano
+        if(estado_atual == ESTADO_SUL_PANTANO) {
+            renderizarBotao(ren, btnEntrarPantano, fnt);
+            renderizarBotao(ren, btnVoltarPantano, fnt);
+        }
+        
+        // Oeste Pantano
+        if(estado_atual == ESTADO_OESTE_PANTANO) {
+            renderizarBotao(ren, btnEntrarPantano, fnt);
+            renderizarBotao(ren, btnVoltarPantano, fnt);
+        }
+        
+        // Boss Norte Pantano
+        if(estado_atual == ESTADO_BOSS_NORTE_PANTANO) {
+            renderizarBotao(ren, btnVoltarPantano, fnt);
+        }
+        
+        // Boss Sul Pantano
+        if(estado_atual == ESTADO_BOSS_SUL_PANTANO) {
+            renderizarBotao(ren, btnVoltarPantano, fnt);
+        }
+        
+        // Boss Oeste Pantano
+        if(estado_atual == ESTADO_BOSS_OESTE_PANTANO) {
+            renderizarBotao(ren, btnVoltarPantano, fnt);
         }
 
         // Castelo - Terreo
