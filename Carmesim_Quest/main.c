@@ -7,397 +7,8 @@
 #include <stdbool.h>
 #include <string.h>
 
-//estrutura dos itens
-typedef struct ITEM{
-    int atk;
-    int crit;
-    int mag;
-    int heal;
-    int gold;
-}ITM;
-
-//estrutura dos personagens
-typedef struct character{
-    int HP;
-    int STR;
-    int INT;
-    int DEX;
-    bool vivo;
-    bool mao_esq;
-    bool mao_dir;
-}CHC;
-
-//estrutura dos inimigos
-typedef struct inimigo{
-    char nome[50];
-    int HP;
-    int STR;
-    int INT;
-    int DEX;
-    bool vivo;
-}INI;
-
-// Variáveis globais para batalha
-bool em_batalha = false;
-INI inimigo_atual;
-int turno_atual = 0;
-char buffer_mensagem[200];
-
-//funções para texto abaixo
-typedef struct TextTexture{
-    SDL_Texture* texture;
-    int largura;
-    int altura;
-    bool visivel;
-}TTR;
-
-TTR CarregaTexto(SDL_Renderer* renderer, TTF_Font* font, const char* text, SDL_Color color){
-    TTR result = {NULL, 0, 0};
-
-    SDL_Surface* surface = TTF_RenderText_Blended(font, text, color);
-
-    if(!surface){
-        return result;
-    }
-
-    result.texture = SDL_CreateTextureFromSurface(renderer, surface);
-
-    if(result.texture){
-        result.largura = surface -> w;
-        result.altura = surface -> h;
-    }
-
-    SDL_FreeSurface(surface);
-    return result;
-}
-
-void renderTextAt(SDL_Renderer* renderer, TTR text, int x, int y){
-    if(!text.texture){
-        return;
-    }
-
-    SDL_Rect dest = {x, y, text.largura, text.altura};
-    SDL_RenderCopy(renderer, text.texture, NULL, &dest);
-}
-
-void freeTextTexture(TTR text){
-    if(text.texture){
-        SDL_DestroyTexture(text.texture);
-    }
-}
-
-//funções para imagens abaixo
-SDL_Texture* carregarTextura(const char* caminho, SDL_Renderer* renderer){
-    SDL_Texture* textura = NULL;
-    SDL_Surface* superficie = IMG_Load(caminho);
-
-    if(!superficie){
-        printf("Erro ao abrir carregar imagem %s: %s\n", caminho, IMG_GetError());
-        return NULL;
-    }
-
-    textura = SDL_CreateTextureFromSurface(renderer, superficie);
-    SDL_FreeSurface(superficie);
-
-    return textura;
-}
-
-typedef struct ObjImage{
-    SDL_Texture* textura;
-    SDL_Rect posicao;
-    bool visivel;
-}OBI;
-
-OBI criarObjetoImagem(const char* caminho, SDL_Renderer* renderer, int x, int y, int w, int h){
-    OBI obj = {0};
-    obj.textura = carregarTextura(caminho, renderer);
-    obj.posicao = (SDL_Rect){x, y, w, h};
-    return obj;
-}
-
-typedef struct Noimagem{
-    OBI imagem;
-    char nome[50];
-    struct Noimagem* prox;
-}Noimagem;
-
-typedef struct ListaImagens{
-    Noimagem* head;
-    int qtde;
-}ListaImagens;
-
-//criar uma nova lista vazia
-ListaImagens* criarListaImagens(){
-    ListaImagens* lista = (ListaImagens*)malloc(sizeof(ListaImagens));
-    lista -> head = NULL;
-    lista -> qtde = 0;
-    return lista;
-}
-
-void adicionarImagem(ListaImagens* lista, OBI imagem, const char* nome){
-    Noimagem* novoNo = (Noimagem*)malloc(sizeof(Noimagem));
-    novoNo -> imagem = imagem;
-    strcpy(novoNo -> nome, nome);
-    novoNo -> prox = NULL;
-
-    //se a lista estiver vazia
-    if(lista -> head == NULL){
-        lista -> head = novoNo;
-    }
-    else{
-        Noimagem* atual = lista -> head;
-        while(atual -> prox != NULL){
-            atual = atual -> prox;
-        }
-        atual -> prox = novoNo;
-    }
-    lista -> qtde++;
-}
-
-OBI* buscaImagem(ListaImagens* lista, const char* nome){
-    Noimagem* atual = lista -> head;
-    while(atual != NULL){
-        if(strcmp(atual -> nome, nome) == 0){
-            return &(atual -> imagem);
-        }
-        atual = atual -> prox;
-    }
-    return NULL; //caso não encontre
-}
-
-void renderizarImagemPorNome(ListaImagens* lista, SDL_Renderer* renderer, const char* nome){
-    OBI* imagem = buscaImagem(lista, nome);
-    if(imagem && imagem -> textura){
-        SDL_RenderCopy(renderer, imagem -> textura, NULL, &imagem -> posicao);
-    }
-}
-
-//definir visibilidade das imagens
-void definirVisibilidadeImagem(ListaImagens* lista, const char* nome, bool visivel){
-
-    Noimagem* atual = lista -> head;
-
-    while(atual != NULL){
-        if(strcmp(atual -> nome, nome) == 0){
-            atual -> imagem.visivel = visivel;
-            return;
-        }
-        atual = atual -> prox;
-    }
-    printf("Imagem '%s' não encontrada para definir visibilidade.\n", nome);
-}
-
-void renderizarImagensVisiveis(ListaImagens* lista, SDL_Renderer* renderer){
-
-    Noimagem* atual = lista -> head;
-
-    while(atual != NULL){
-        if(atual -> imagem.visivel && atual -> imagem.textura){
-            SDL_RenderCopy(renderer, atual -> imagem.textura, NULL, &atual -> imagem.posicao);
-        }
-        atual = atual -> prox;
-    }
-}
-
-void esconderTodasImagens(ListaImagens* lista){
-
-    Noimagem* atual = lista -> head;
-    while(atual != NULL){
-        atual -> imagem.visivel = false;
-        atual = atual -> prox;
-    }
-}
-
-//liberar toda a memoria da lista de imagens
-void liberarListaImagem(ListaImagens* lista){
-    Noimagem* atual = lista -> head;
-    while(atual != NULL){
-        Noimagem* proximo = atual -> prox;
-        if(atual -> imagem.textura){
-            SDL_DestroyTexture(atual -> imagem.textura);
-        }
-        free(atual);
-        atual = proximo;
-    }
-    free(lista);
-}
-
-// ========== LISTA ENCADEADA DE TEXTOS ==========
-typedef struct TextNode {
-    TTR textTexture;
-    char nome[50];
-    bool visible;
-    int x, y;
-    struct TextNode* prox;
-} TextNode;
-
-typedef struct TextList {
-    TextNode* head;
-    int count;
-} TextList;
-
-//criar lista de textos
-TextList* createTextList(){
-    TextList* list = (TextList*)malloc(sizeof(TextList));
-    list->head = NULL;
-    list->count = 0;
-    return list;
-}
-
-//Adicionar texto a lista
-void adicionartexto(TextList* list, SDL_Renderer* renderer, TTF_Font* font, const char* text, SDL_Color color, int x, int y, const char* nome){
-    TextNode* newNode = (TextNode*)malloc(sizeof(TextNode));
-    newNode->textTexture = CarregaTexto(renderer, font, text, color);
-    strcpy(newNode->nome, nome);
-    newNode->visible = true;
-    newNode->x = x;
-    newNode->y = y;
-    newNode->prox = NULL;
-
-    if(list->head == NULL){
-        list->head = newNode;
-    }
-    else{
-        TextNode* atual = list->head;
-        while(atual->prox != NULL){
-            atual = atual->prox;
-        }
-        atual->prox = newNode;
-    }
-    list->count++;
-}
-
-//buscar texto por nome
-TextNode* buscaTexto(TextList* list, const char* nome){
-    TextNode* atual = list->head;
-    while(atual != NULL){
-        if(strcmp(atual->nome, nome) == 0){
-            return atual;
-        }
-        atual = atual->prox;
-    }
-    return NULL;
-}
-
-//renderizar texto por nome
-void renderizarTextoPorNome(TextList* list, SDL_Renderer* renderer, const char* nome){
-    TextNode* textNode = buscaTexto(list, nome);
-    if(textNode && textNode->visible){
-        renderTextAt(renderer, textNode->textTexture, textNode->x, textNode->y);
-    }
-}
-
-//renderizar todos os textos visiveis
-void RenderizarTodosOsTextosVisiveis(TextList* list, SDL_Renderer* renderer){
-    TextNode* atual = list->head;
-    while(atual != NULL){
-        if(atual->visible){
-            renderTextAt(renderer, atual->textTexture, atual->x, atual->y);
-        }
-        atual = atual->prox;
-    }
-}
-
-//Definir visibilidade do texto
-void setTextVisibilidade(TextList* list, const char* nome, bool visible){
-    TextNode* textNode = buscaTexto(list, nome);
-    if(textNode){
-        textNode->visible = visible;
-    }
-}
-
-//esconder todos os textos
-void esconderTodosOsTextos(TextList* list){
-    TextNode* atual = list->head;
-    while(atual != NULL){
-        atual->visible = false;
-        atual = atual->prox;
-    }
-}
-
-//atualizar texto
-void updateText(TextList* list, SDL_Renderer* renderer, TTF_Font* font, const char* nome, const char* newText, SDL_Color color){
-    TextNode* textNode = buscaTexto(list, nome);
-    if(textNode){
-        freeTextTexture(textNode->textTexture);
-        textNode->textTexture = CarregaTexto(renderer, font, newText, color);
-    }
-}
-
-//mover texto
-void moveText(TextList* list, const char* nome, int newX, int newY){
-    TextNode* textNode = buscaTexto(list, nome);
-    if(textNode){
-        textNode->x = newX;
-        textNode->y = newY;
-    }
-}
-
-//liberar memória da lista
-void freeTextList(TextList* list){
-    TextNode* atual = list->head;
-    while(atual != NULL){
-        TextNode* prox = atual->prox;
-        freeTextTexture(atual->textTexture);
-        free(atual);
-        atual = prox;
-    }
-    free(list);
-}
-
-//inicializar o inimigo
-void inicializarInimigo(INI* inimigo, const char* nome, int hp, int str){
-    strcpy(inimigo -> nome, nome);
-    inimigo -> HP = hp;
-    inimigo -> STR = str;
-    inimigo -> vivo = true;
-}
-
-//função para ataque do jogador
-void ataqueJogador(CHC* jogador, INI* inimigo){
-    int dano = jogador -> STR + (rand() % 3);
-    inimigo -> HP -= dano;
-
-    if(inimigo -> HP < 0){
-        inimigo -> HP = 0;
-    }
-
-    snprintf(buffer_mensagem, sizeof(buffer_mensagem), "Voce atacou e causou %d de dano! %s HP: %d", dano, inimigo -> nome, inimigo -> HP);
-
-    if(inimigo -> HP <= 0){
-        inimigo -> vivo = false;
-        strcat(buffer_mensagem, " - INIMIGO DERROTADO");
-    }
-}
-
-// funçao para ataque do inimigo
-void ataqueInimigo(CHC* jogador, INI* inimigo){
-    int dano = inimigo -> STR + (rand() % 3);
-    jogador -> HP -= dano;
-
-    if(jogador -> HP < 0){
-        jogador -> HP = 0;
-    }
-
-    snprintf(buffer_mensagem, sizeof(buffer_mensagem), "%s atacou e causou %d de dano! Seu HP: %d", inimigo -> nome, dano, jogador -> HP);
-
-    if(jogador -> HP <= 0){
-        jogador -> vivo = false;
-        strcat(buffer_mensagem, " - VOCE MORREU!");
-    }
-}
-
-//função para iniciar a batalha
-void iniciarBatalha(CHC* jogador){
-    em_batalha = true;
-    turno_atual = 0;
-    inicializarInimigo(&inimigo_atual, "Guerreiro da Arena", 10, 2);
-    strcpy(buffer_mensagem, "Batalha iniciada! Escolha uma acao.");
-}
-
-//===== SISTEMA SIMPLES DE ESTADOS=========
+// ========== ENUMERAÇÕES ==========
 typedef enum {
-
     ESTADO_MENU_PRINCIPAL,
     ESTADO_TELA_CARREGAMENTO,
     ESTADO_VILA,
@@ -428,17 +39,460 @@ typedef enum {
     ESTADO_BOSS_OESTE_PLANICIE,
     ESTADO_BOSS_NORTE_PANTANO,
     ESTADO_BOSS_SUL_PANTANO,
-    ESTADO_BOSS_OESTE_PANTANO
-
+    ESTADO_BOSS_OESTE_PANTANO,
+    ESTADO_TELA_PERSONAGEM,
+    ESTADO_TELA_ITENS
 } EstadoJogo;
 
-//Listas globais
+// ========== ESTRUTURAS DE DADOS ==========
+typedef struct ITEM {
+
+    int atk;
+    int crit;
+    int mag;
+    int heal;
+    int gold;
+
+
+} ITM;
+
+typedef struct character {
+    int HP;
+    int HP_MAX;
+    int STR;
+    int INT;
+    int DEX;
+    int VIT;
+    int pontosDisponiveis;
+    bool vivo;
+    bool mao_esq;
+    bool mao_dir;
+} CHC;
+
+typedef struct inimigo {
+    char nome[50];
+    int HP;
+    int STR;
+    int INT;
+    int DEX;
+    bool vivo;
+} INI;
+
+typedef struct TextTexture {
+    SDL_Texture* texture;
+    int largura;
+    int altura;
+    bool visivel;
+} TTR;
+
+typedef struct ObjImage {
+    SDL_Texture* textura;
+    SDL_Rect posicao;
+    bool visivel;
+} OBI;
+
+typedef struct Noimagem {
+    OBI imagem;
+    char nome[50];
+    struct Noimagem* prox;
+} Noimagem;
+
+typedef struct ListaImagens {
+    Noimagem* head;
+    int qtde;
+} ListaImagens;
+
+typedef struct TextNode {
+    TTR textTexture;
+    char nome[50];
+    bool visible;
+    int x, y;
+    struct TextNode* prox;
+} TextNode;
+
+typedef struct TextList {
+    TextNode* head;
+    int count;
+} TextList;
+
+typedef struct Botao {
+    SDL_Rect rect;
+    const char* texto;
+    SDL_Color corFundo;
+    SDL_Color corBorda;
+    SDL_Color corTexto;
+    bool visivel;
+    bool ativo;
+} Botao;
+
+// ========== VARIÁVEIS GLOBAIS ==========
+bool em_batalha = false;
+INI inimigo_atual;
+int turno_atual = 0;
+char buffer_mensagem[200];
+
+// Variáveis globais que serão inicializadas no main
 ListaImagens* imagens_globais;
 TextList* textos_globais;
 EstadoJogo estado_atual;
 EstadoJogo estado_anterior;
 
-//==========Funções cada estado========
+//Globais para criação do personagem
+CHC personagemCriacao;
+CHC personagemFinal;
+bool personagemCriado = false;
+
+// ========== PROTÓTIPOS DE FUNÇÕES ==========
+// Funções de texto
+TTR CarregaTexto(SDL_Renderer* renderer, TTF_Font* font, const char* text, SDL_Color color);
+void renderTextAt(SDL_Renderer* renderer, TTR text, int x, int y);
+void freeTextTexture(TTR text);
+
+// Funções de imagem
+SDL_Texture* carregarTextura(const char* caminho, SDL_Renderer* renderer);
+OBI criarObjetoImagem(const char* caminho, SDL_Renderer* renderer, int x, int y, int w, int h);
+
+// Lista de imagens
+ListaImagens* criarListaImagens();
+void adicionarImagem(ListaImagens* lista, OBI imagem, const char* nome);
+OBI* buscaImagem(ListaImagens* lista, const char* nome);
+void definirVisibilidadeImagem(ListaImagens* lista, const char* nome, bool visivel);
+void renderizarImagensVisiveis(ListaImagens* lista, SDL_Renderer* renderer);
+void esconderTodasImagens(ListaImagens* lista);
+void liberarListaImagem(ListaImagens* lista);
+
+// Lista de textos
+TextList* createTextList();
+void adicionartexto(TextList* list, SDL_Renderer* renderer, TTF_Font* font, const char* text,
+                   SDL_Color color, int x, int y, const char* nome);
+TextNode* buscaTexto(TextList* list, const char* nome);
+void setTextVisibilidade(TextList* list, const char* nome, bool visible);
+void RenderizarTodosOsTextosVisiveis(TextList* list, SDL_Renderer* renderer);
+void esconderTodosOsTextos(TextList* list);
+void updateText(TextList* list, SDL_Renderer* renderer, TTF_Font* font,
+                const char* nome, const char* newText, SDL_Color color);
+void freeTextList(TextList* list);
+
+// Sistema de batalha
+void inicializarInimigo(INI* inimigo, const char* nome, int hp, int str);
+void ataqueJogador(CHC* jogador, INI* inimigo);
+void ataqueInimigo(CHC* jogador, INI* inimigo);
+void iniciarBatalha(CHC* jogador);
+
+// Funções de carregamento de estados
+void carregarMenu();
+void carregarVila();
+void carregarArena();
+void carregarMapa();
+void carregarTelaPersonagem();
+void carregarPantano();
+void carregarDirecoesPantano();
+void carregarRosaDosVentosPantano();
+void carregarNortePantano();
+void carregarSulPantano();
+void carregarLestePantano();
+void carregarOestePantano();
+void carregarBossNortePantano();
+void carregarBossSulPantano();
+void carregarBossOestePantano();
+void carregarPlanicie();
+void carregarDirecoesPlanicie();
+void carregarRosaDosVentosPlanicie();
+void carregarNortePlanicie();
+void carregarSulPlanicie();
+void carregarLestePlanicie();
+void carregarOestePlanicie();
+void carregarBossNortePlanicie();
+void carregarBossSulPlanicie();
+void carregarBossOestePlanicie();
+void carregarTerreo();
+void carregarPrimeiroAndar();
+void carregarSegundoAndar();
+void carregarSalaRei();
+void carregarTelaCarregamento();
+void desativarEstadoAtual();
+void inicializarStatsCriacao();
+void carregarTelaItens();
+
+// Sistema de mudança de estado
+void mudarEstado(EstadoJogo novo_estado);
+
+// Sistema de botões
+Botao criarBotao(int x, int y, int largura, int altura, const char* texto,
+                 SDL_Color fundo, SDL_Color borda, SDL_Color textoCor);
+bool cliqueBotao(Botao btn, int mouseX, int mouseY);
+void renderizarBotao(SDL_Renderer* ren, Botao btn, TTF_Font* fonte);
+
+// ========== IMPLEMENTAÇÃO DAS FUNÇÕES ==========
+
+// ========== FUNÇÕES DE TEXTO ==========
+TTR CarregaTexto(SDL_Renderer* renderer, TTF_Font* font, const char* text, SDL_Color color) {
+    TTR result = {NULL, 0, 0};
+    SDL_Surface* surface = TTF_RenderText_Blended(font, text, color);
+
+    if (!surface) return result;
+
+    result.texture = SDL_CreateTextureFromSurface(renderer, surface);
+
+    if (result.texture) {
+        result.largura = surface->w;
+        result.altura = surface->h;
+    }
+
+    SDL_FreeSurface(surface);
+    return result;
+}
+
+void renderTextAt(SDL_Renderer* renderer, TTR text, int x, int y) {
+    if (!text.texture) return;
+
+    SDL_Rect dest = {x, y, text.largura, text.altura};
+    SDL_RenderCopy(renderer, text.texture, NULL, &dest);
+}
+
+void freeTextTexture(TTR text) {
+    if (text.texture) {
+        SDL_DestroyTexture(text.texture);
+    }
+}
+
+// ========== FUNÇÕES DE IMAGEM ==========
+SDL_Texture* carregarTextura(const char* caminho, SDL_Renderer* renderer) {
+    SDL_Texture* textura = NULL;
+    SDL_Surface* superficie = IMG_Load(caminho);
+
+    if (!superficie) {
+        printf("Erro ao carregar imagem %s: %s\n", caminho, IMG_GetError());
+        return NULL;
+    }
+
+    textura = SDL_CreateTextureFromSurface(renderer, superficie);
+    SDL_FreeSurface(superficie);
+    return textura;
+}
+
+OBI criarObjetoImagem(const char* caminho, SDL_Renderer* renderer, int x, int y, int w, int h) {
+    OBI obj = {0};
+    obj.textura = carregarTextura(caminho, renderer);
+    obj.posicao = (SDL_Rect){x, y, w, h};
+    obj.visivel = false;
+    return obj;
+}
+
+// ========== LISTA DE IMAGENS ==========
+ListaImagens* criarListaImagens() {
+    ListaImagens* lista = (ListaImagens*)malloc(sizeof(ListaImagens));
+    lista->head = NULL;
+    lista->qtde = 0;
+    return lista;
+}
+
+void adicionarImagem(ListaImagens* lista, OBI imagem, const char* nome) {
+    Noimagem* novoNo = (Noimagem*)malloc(sizeof(Noimagem));
+    novoNo->imagem = imagem;
+    strcpy(novoNo->nome, nome);
+    novoNo->prox = NULL;
+
+    if (lista->head == NULL) {
+        lista->head = novoNo;
+    } else {
+        Noimagem* atual = lista->head;
+        while (atual->prox != NULL) {
+            atual = atual->prox;
+        }
+        atual->prox = novoNo;
+    }
+    lista->qtde++;
+}
+
+OBI* buscaImagem(ListaImagens* lista, const char* nome) {
+    Noimagem* atual = lista->head;
+    while (atual != NULL) {
+        if (strcmp(atual->nome, nome) == 0) {
+            return &(atual->imagem);
+        }
+        atual = atual->prox;
+    }
+    return NULL;
+}
+
+void definirVisibilidadeImagem(ListaImagens* lista, const char* nome, bool visivel) {
+    Noimagem* atual = lista->head;
+    while (atual != NULL) {
+        if (strcmp(atual->nome, nome) == 0) {
+            atual->imagem.visivel = visivel;
+            return;
+        }
+        atual = atual->prox;
+    }
+}
+
+void renderizarImagensVisiveis(ListaImagens* lista, SDL_Renderer* renderer) {
+    Noimagem* atual = lista->head;
+    while (atual != NULL) {
+        if (atual->imagem.visivel && atual->imagem.textura) {
+            SDL_RenderCopy(renderer, atual->imagem.textura, NULL, &atual->imagem.posicao);
+        }
+        atual = atual->prox;
+    }
+}
+
+void esconderTodasImagens(ListaImagens* lista) {
+    Noimagem* atual = lista->head;
+    while (atual != NULL) {
+        atual->imagem.visivel = false;
+        atual = atual->prox;
+    }
+}
+
+void liberarListaImagem(ListaImagens* lista) {
+    Noimagem* atual = lista->head;
+    while (atual != NULL) {
+        Noimagem* proximo = atual->prox;
+        if (atual->imagem.textura) {
+            SDL_DestroyTexture(atual->imagem.textura);
+        }
+        free(atual);
+        atual = proximo;
+    }
+    free(lista);
+}
+
+// ========== LISTA DE TEXTOS ==========
+TextList* createTextList() {
+    TextList* list = (TextList*)malloc(sizeof(TextList));
+    list->head = NULL;
+    list->count = 0;
+    return list;
+}
+
+void adicionartexto(TextList* list, SDL_Renderer* renderer, TTF_Font* font, const char* text,
+                   SDL_Color color, int x, int y, const char* nome) {
+    TextNode* newNode = (TextNode*)malloc(sizeof(TextNode));
+    newNode->textTexture = CarregaTexto(renderer, font, text, color);
+    strcpy(newNode->nome, nome);
+    newNode->visible = true;
+    newNode->x = x;
+    newNode->y = y;
+    newNode->prox = NULL;
+
+    if (list->head == NULL) {
+        list->head = newNode;
+    } else {
+        TextNode* atual = list->head;
+        while (atual->prox != NULL) {
+            atual = atual->prox;
+        }
+        atual->prox = newNode;
+    }
+    list->count++;
+}
+
+TextNode* buscaTexto(TextList* list, const char* nome) {
+    TextNode* atual = list->head;
+    while (atual != NULL) {
+        if (strcmp(atual->nome, nome) == 0) {
+            return atual;
+        }
+        atual = atual->prox;
+    }
+    return NULL;
+}
+
+void setTextVisibilidade(TextList* list, const char* nome, bool visible) {
+    TextNode* textNode = buscaTexto(list, nome);
+    if (textNode) {
+        textNode->visible = visible;
+    }
+}
+
+void RenderizarTodosOsTextosVisiveis(TextList* list, SDL_Renderer* renderer) {
+    TextNode* atual = list->head;
+    while (atual != NULL) {
+        if (atual->visible) {
+            renderTextAt(renderer, atual->textTexture, atual->x, atual->y);
+        }
+        atual = atual->prox;
+    }
+}
+
+void esconderTodosOsTextos(TextList* list) {
+    TextNode* atual = list->head;
+    while (atual != NULL) {
+        atual->visible = false;
+        atual = atual->prox;
+    }
+}
+
+void updateText(TextList* list, SDL_Renderer* renderer, TTF_Font* font,
+                const char* nome, const char* newText, SDL_Color color) {
+    TextNode* textNode = buscaTexto(list, nome);
+    if (textNode) {
+        freeTextTexture(textNode->textTexture);
+        textNode->textTexture = CarregaTexto(renderer, font, newText, color);
+    }
+}
+
+void freeTextList(TextList* list) {
+    TextNode* atual = list->head;
+    while (atual != NULL) {
+        TextNode* prox = atual->prox;
+        freeTextTexture(atual->textTexture);
+        free(atual);
+        atual = prox;
+    }
+    free(list);
+}
+
+// ========== SISTEMA DE BATALHA ==========
+void inicializarInimigo(INI* inimigo, const char* nome, int hp, int str) {
+    strcpy(inimigo->nome, nome);
+    inimigo->HP = hp;
+    inimigo->STR = str;
+    inimigo->vivo = true;
+}
+
+void ataqueJogador(CHC* jogador, INI* inimigo) {
+    int dano = jogador->STR + (rand() % 3);
+    inimigo->HP -= dano;
+    if (inimigo->HP < 0) inimigo->HP = 0;
+
+    snprintf(buffer_mensagem, sizeof(buffer_mensagem),
+             "Voce atacou e causou %d de dano! %s HP: %d",
+             dano, inimigo->nome, inimigo->HP);
+
+    if (inimigo->HP <= 0) {
+        inimigo->vivo = false;
+        strcat(buffer_mensagem, " - INIMIGO DERROTADO");
+    }
+}
+
+void ataqueInimigo(CHC* jogador, INI* inimigo) {
+    int dano = inimigo->STR + (rand() % 3);
+    jogador->HP -= dano;
+    if (jogador->HP < 0) jogador->HP = 0;
+
+    snprintf(buffer_mensagem, sizeof(buffer_mensagem),
+             "%s atacou e causou %d de dano! Seu HP: %d",
+             inimigo->nome, dano, jogador->HP);
+
+    if (jogador->HP <= 0) {
+        jogador->vivo = false;
+        strcat(buffer_mensagem, " - VOCE MORREU!");
+    }
+}
+
+void iniciarBatalha(CHC* jogador) {
+
+
+    em_batalha = true;
+    turno_atual = 0;
+    inicializarInimigo(&inimigo_atual, "Guerreiro da Arena", 10, 2);
+    strcpy(buffer_mensagem, "Batalha iniciada! Escolha uma acao.");
+}
+
+
+// ========== FUNÇÕES DE CARREGAMENTO DE ESTADOS ==========
 void carregarMenu() {
     esconderTodasImagens(imagens_globais);
     esconderTodosOsTextos(textos_globais);
@@ -474,6 +528,45 @@ void carregarMapa() {
     definirVisibilidadeImagem(imagens_globais, "Mapa", true);
 }
 
+void carregarTelaPersonagem(){
+
+    esconderTodasImagens(imagens_globais);
+    esconderTodosOsTextos(textos_globais);
+
+    // Mostrar imagem de fundo
+    definirVisibilidadeImagem(imagens_globais, "FundoSelecPers", true);
+
+    // Mostrar todos os textos relacionados à criação de personagem
+    setTextVisibilidade(textos_globais, "titulo_criacao", true);
+    setTextVisibilidade(textos_globais, "instrucoes", true);
+    setTextVisibilidade(textos_globais, "pontos_disponiveis", true);
+    setTextVisibilidade(textos_globais, "stat_forca", true);
+    setTextVisibilidade(textos_globais, "stat_destreza", true);
+    setTextVisibilidade(textos_globais, "stat_inteligencia", true);
+    setTextVisibilidade(textos_globais, "stat_vitalidade", true);
+    setTextVisibilidade(textos_globais, "hp_final", true);
+    setTextVisibilidade(textos_globais, "mensagem_batalha", true);
+
+    // Inicializar os stats do personagem (se ainda não foi feito)
+    if (!personagemCriado) {
+        inicializarStatsCriacao();
+    }
+
+    printf("Tela de personagem carregada\n");
+    printf("Pontos disponiveis: %d\n", personagemCriacao.pontosDisponiveis);
+
+}
+
+void carregarTelaItens(){
+
+    esconderTodasImagens(imagens_globais);
+    esconderTodosOsTextos(textos_globais);
+
+    definirVisibilidadeImagem(imagens_globais, "FundoSelecPers", true);
+
+}
+
+// FUNÇÕES RELACIONADAS AO PÂNTANO
 void carregarPantano() {
     esconderTodasImagens(imagens_globais);
     esconderTodosOsTextos(textos_globais);
@@ -482,66 +575,17 @@ void carregarPantano() {
     setTextVisibilidade(textos_globais, "mapa_text", true);
 }
 
-void carregarPlanicie() {
+void carregarDirecoesPantano() {
     esconderTodasImagens(imagens_globais);
     esconderTodosOsTextos(textos_globais);
-    definirVisibilidadeImagem(imagens_globais, "Planicie", true);
-    setTextVisibilidade(textos_globais, "regioes_text", true);
-    setTextVisibilidade(textos_globais, "mapa_text", true);
-}
-
-void carregarDirecoesPantano() {
-    esconderTodasImagens(imagens_globais);  // Adicionado
-    esconderTodosOsTextos(textos_globais);  // Adicionado
     definirVisibilidadeImagem(imagens_globais, "DirecoesPantano", true);
     printf("Tá funcionando");
 }
 
-void carregarDirecoesPlanicie() {
-    esconderTodasImagens(imagens_globais);  // Adicionado
-    esconderTodosOsTextos(textos_globais);  // Adicionado
-    definirVisibilidadeImagem(imagens_globais, "DirecoesPlanicie", true);
-    printf("Tá funcionando");
-}
-
-void carregarTerreo() {
+void carregarRosaDosVentosPantano() {
     esconderTodasImagens(imagens_globais);
     esconderTodosOsTextos(textos_globais);
-    definirVisibilidadeImagem(imagens_globais, "Terreo", true);
-    setTextVisibilidade(textos_globais, "primeiro_andar", true);
-    setTextVisibilidade(textos_globais, "segundo_andar", true);
-    setTextVisibilidade(textos_globais, "sala_rei", true);
-    setTextVisibilidade(textos_globais, "mapa_text", true);
-}
-
-void carregarPrimeiroAndar() {
-    esconderTodasImagens(imagens_globais);
-    esconderTodosOsTextos(textos_globais);
-    definirVisibilidadeImagem(imagens_globais, "PrimeiroAndar", true);
-    setTextVisibilidade(textos_globais, "terreo_text", true);
-    setTextVisibilidade(textos_globais, "segundo_andar", true);
-    setTextVisibilidade(textos_globais, "sala_rei", true);
-    setTextVisibilidade(textos_globais, "mapa_text", true);
-}
-
-void carregarSegundoAndar() {
-    esconderTodasImagens(imagens_globais);
-    esconderTodosOsTextos(textos_globais);
-    definirVisibilidadeImagem(imagens_globais, "SegundoAndar", true);
-    setTextVisibilidade(textos_globais, "terreo_text", true);
-    setTextVisibilidade(textos_globais, "primeiro_andar", true);
-    setTextVisibilidade(textos_globais, "sala_rei", true);
-    setTextVisibilidade(textos_globais, "mapa_text", true);
-}
-
-void carregarSalaRei() {
-    esconderTodasImagens(imagens_globais);
-    esconderTodosOsTextos(textos_globais);
-    definirVisibilidadeImagem(imagens_globais, "SalaRei", true);
-    setTextVisibilidade(textos_globais, "terreo_text", true);
-    setTextVisibilidade(textos_globais, "primeiro_andar", true);
-    setTextVisibilidade(textos_globais, "segundo_andar", true);
-    setTextVisibilidade(textos_globais, "mapa_text", true);
+    definirVisibilidadeImagem(imagens_globais, "Direcoes", true);
 }
 
 void carregarNortePantano() {
@@ -568,8 +612,54 @@ void carregarLestePantano() {
 void carregarOestePantano() {
     esconderTodasImagens(imagens_globais);
     esconderTodosOsTextos(textos_globais);
-    definirVisibilidadeImagem(imagens_globais, "Lago_Monstro_Pantano", true);
+    definirVisibilidadeImagem(imagens_globais, "Oeste_pantano", true);
     setTextVisibilidade(textos_globais, "", true);
+}
+
+void carregarBossNortePantano() {
+    esconderTodasImagens(imagens_globais);
+    esconderTodosOsTextos(textos_globais);
+    definirVisibilidadeImagem(imagens_globais, "Interior_Casa_Bruxa_Pantano", true);
+    definirVisibilidadeImagem(imagens_globais, "Boss_Bruxa_Pantano", true);
+    setTextVisibilidade(textos_globais, "mapa_text", true);
+}
+
+void carregarBossSulPantano() {
+    esconderTodasImagens(imagens_globais);
+    esconderTodosOsTextos(textos_globais);
+    definirVisibilidadeImagem(imagens_globais, "Boss_Fantasma_Pantano", true);
+    definirVisibilidadeImagem(imagens_globais, "Rei_Fantasma", true);
+    setTextVisibilidade(textos_globais, "mapa_text", true);
+}
+
+void carregarBossOestePantano() {
+    esconderTodasImagens(imagens_globais);
+    esconderTodosOsTextos(textos_globais);
+    definirVisibilidadeImagem(imagens_globais, "Regiao_boss_pantano", true);
+    definirVisibilidadeImagem(imagens_globais, "Monstro_Pantano", true);
+    setTextVisibilidade(textos_globais, "mapa_text", true);
+}
+
+// FUNÇÕES RELACIONADAS À PLANÍCIE
+void carregarPlanicie() {
+    esconderTodasImagens(imagens_globais);
+    esconderTodosOsTextos(textos_globais);
+    definirVisibilidadeImagem(imagens_globais, "Planicie", true);
+    setTextVisibilidade(textos_globais, "regioes_text", true);
+    setTextVisibilidade(textos_globais, "mapa_text", true);
+}
+
+void carregarDirecoesPlanicie() {
+    esconderTodasImagens(imagens_globais);
+    esconderTodosOsTextos(textos_globais);
+    definirVisibilidadeImagem(imagens_globais, "DirecoesPlanicie", true);
+    printf("Tá funcionando");
+}
+
+void carregarRosaDosVentosPlanicie() {
+    esconderTodasImagens(imagens_globais);
+    esconderTodosOsTextos(textos_globais);
+    definirVisibilidadeImagem(imagens_globais, "Direcoes", true);
 }
 
 void carregarNortePlanicie() {
@@ -624,27 +714,44 @@ void carregarBossOestePlanicie() {
     setTextVisibilidade(textos_globais, "mapa_text", true);
 }
 
-void carregarBossNortePantano() {
+// FUNÇÕES RELACIONADAS AO CASTELO
+void carregarTerreo() {
     esconderTodasImagens(imagens_globais);
     esconderTodosOsTextos(textos_globais);
-    definirVisibilidadeImagem(imagens_globais, "Interior_Casa_Bruxa_Pantano", true);
-    definirVisibilidadeImagem(imagens_globais, "Boss_Bruxa_Pantano", true);
+    definirVisibilidadeImagem(imagens_globais, "Terreo", true);
+    setTextVisibilidade(textos_globais, "primeiro_andar", true);
+    setTextVisibilidade(textos_globais, "segundo_andar", true);
+    setTextVisibilidade(textos_globais, "sala_rei", true);
     setTextVisibilidade(textos_globais, "mapa_text", true);
 }
 
-void carregarBossSulPantano() {
+void carregarPrimeiroAndar() {
     esconderTodasImagens(imagens_globais);
     esconderTodosOsTextos(textos_globais);
-    definirVisibilidadeImagem(imagens_globais, "Boss_Fantasma_Pantano", true);
-    definirVisibilidadeImagem(imagens_globais, "Rei_Fantasma", true);
+    definirVisibilidadeImagem(imagens_globais, "PrimeiroAndar", true);
+    setTextVisibilidade(textos_globais, "terreo_text", true);
+    setTextVisibilidade(textos_globais, "segundo_andar", true);
+    setTextVisibilidade(textos_globais, "sala_rei", true);
     setTextVisibilidade(textos_globais, "mapa_text", true);
 }
 
-void carregarBossOestePantano() {
+void carregarSegundoAndar() {
     esconderTodasImagens(imagens_globais);
     esconderTodosOsTextos(textos_globais);
-    definirVisibilidadeImagem(imagens_globais, "Boss_Monstro_Pantano", true);
-    definirVisibilidadeImagem(imagens_globais, "Monstro_Pantano", true);
+    definirVisibilidadeImagem(imagens_globais, "SegundoAndar", true);
+    setTextVisibilidade(textos_globais, "terreo_text", true);
+    setTextVisibilidade(textos_globais, "primeiro_andar", true);
+    setTextVisibilidade(textos_globais, "sala_rei", true);
+    setTextVisibilidade(textos_globais, "mapa_text", true);
+}
+
+void carregarSalaRei() {
+    esconderTodasImagens(imagens_globais);
+    esconderTodosOsTextos(textos_globais);
+    definirVisibilidadeImagem(imagens_globais, "SalaRei", true);
+    setTextVisibilidade(textos_globais, "terreo_text", true);
+    setTextVisibilidade(textos_globais, "primeiro_andar", true);
+    setTextVisibilidade(textos_globais, "segundo_andar", true);
     setTextVisibilidade(textos_globais, "mapa_text", true);
 }
 
@@ -655,32 +762,24 @@ void carregarTelaCarregamento() {
     setTextVisibilidade(textos_globais, "carregamento", true);
 }
 
-void carregarRosaDosVentos(){
-
-    esconderTodasImagens(imagens_globais);
-    esconderTodosOsTextos(textos_globais);
-
-    definirVisibilidadeImagem(imagens_globais, "Direcoes", true);
-
-}
-
 void desativarEstadoAtual() {
     esconderTodasImagens(imagens_globais);
     esconderTodosOsTextos(textos_globais);
 }
 
-// Função para mudar de estado
+// ========== SISTEMA DE MUDANÇA DE ESTADO ==========
 void mudarEstado(EstadoJogo novo_estado) {
     printf("Mudando estado de %d para %d\n", estado_atual, novo_estado);
 
     desativarEstadoAtual();
-
     estado_anterior = estado_atual;
     estado_atual = novo_estado;
 
     switch(novo_estado) {
         case ESTADO_MENU_PRINCIPAL: carregarMenu(); break;
         case ESTADO_TELA_CARREGAMENTO: carregarTelaCarregamento(); break;
+        case ESTADO_TELA_PERSONAGEM: carregarTelaPersonagem(); break;
+        case ESTADO_TELA_ITENS: carregarTelaItens(); break;
         case ESTADO_VILA: carregarVila(); break;
         case ESTADO_MAPA: carregarMapa(); break;
         case ESTADO_PANTANO: carregarPantano(); break;
@@ -706,25 +805,15 @@ void mudarEstado(EstadoJogo novo_estado) {
         case ESTADO_SEGUNDO_ANDAR: carregarSegundoAndar(); break;
         case ESTADO_SALA_REI: carregarSalaRei(); break;
         case ESTADO_ARENA: carregarArena(); break;
-        case ESTADO_ROSA_DOS_VENTOS_PANTANO: carregarRosaDosVentos(); break;
-	case ESTADO_ROSA_DOS_VENTOS_PLANICIE: carregarRosaDosVentos(); break;
+        case ESTADO_ROSA_DOS_VENTOS_PANTANO: carregarRosaDosVentosPantano(); break;
+        case ESTADO_ROSA_DOS_VENTOS_PLANICIE: carregarRosaDosVentosPlanicie(); break;
         default: carregarMenu(); break;
     }
 }
 
 // ========== SISTEMA DE BOTÕES ==========
-typedef struct Botao {
-    SDL_Rect rect;
-    const char* texto;
-    SDL_Color corFundo;
-    SDL_Color corBorda;
-    SDL_Color corTexto;
-    bool visivel;
-    bool ativo;
-} Botao;
-
-// Criar botão com cores personalizadas
-Botao criarBotao(int x, int y, int largura, int altura, const char* texto, SDL_Color fundo, SDL_Color borda, SDL_Color textoCor) {
+Botao criarBotao(int x, int y, int largura, int altura, const char* texto,
+                 SDL_Color fundo, SDL_Color borda, SDL_Color textoCor) {
     Botao btn;
     btn.rect = (SDL_Rect){x, y, largura, altura};
     btn.texto = texto;
@@ -736,14 +825,12 @@ Botao criarBotao(int x, int y, int largura, int altura, const char* texto, SDL_C
     return btn;
 }
 
-// Verificar clique no botão
 bool cliqueBotao(Botao btn, int mouseX, int mouseY) {
     if (!btn.visivel || !btn.ativo) return false;
     return (mouseX >= btn.rect.x && mouseX <= btn.rect.x + btn.rect.w &&
             mouseY >= btn.rect.y && mouseY <= btn.rect.y + btn.rect.h);
 }
 
-// Renderizar botão com retângulo colorido
 void renderizarBotao(SDL_Renderer* ren, Botao btn, TTF_Font* fonte) {
     if (!btn.visivel) return;
 
@@ -767,32 +854,122 @@ void renderizarBotao(SDL_Renderer* ren, Botao btn, TTF_Font* fonte) {
     }
 }
 
-//FUNÇÃO MAIN
-int main (int argc, char* args[])
-{
-    //adicionado para fins de aleatoriedade
+// ========= FUNÇÕES DE CRIAÇÃO DE PERSONAGEM ========
+void inicializarStatsCriacao() {
+    // Valores iniciais mínimos
+    personagemCriacao.STR = 1;
+    personagemCriacao.DEX = 1;
+    personagemCriacao.INT = 1;
+    personagemCriacao.VIT = 1;
+
+    // 40 pontos totais - 4 já usados (1 em cada atributo) = 36 disponíveis
+    personagemCriacao.pontosDisponiveis = 36;
+
+    // Calcular HP baseado na vitalidade
+    personagemCriacao.HP_MAX = 10 + (personagemCriacao.VIT * 2);
+    personagemCriacao.HP = personagemCriacao.HP_MAX;
+
+    personagemCriacao.vivo = true;
+    personagemCriacao.mao_esq = false;
+    personagemCriacao.mao_dir = false;
+}
+
+void aumentarAtributo(int* atributo) {
+    if (personagemCriacao.pontosDisponiveis > 0) {
+        (*atributo)++;
+        personagemCriacao.pontosDisponiveis--;
+    }
+}
+
+void diminuirAtributo(int* atributo) {
+    if (*atributo > 1) {  // Mínimo de 1 em cada atributo
+        (*atributo)--;
+        personagemCriacao.pontosDisponiveis++;
+    }
+}
+
+void finalizarPersonagem() {
+    // Copiar personagem de criação para o personagem final
+    personagemFinal = personagemCriacao;
+
+    // Recalcular HP final baseado na VIT
+    personagemFinal.HP_MAX = 10 + (personagemFinal.VIT * 2);
+    personagemFinal.HP = personagemFinal.HP_MAX;
+
+    personagemCriado = true;
+
+    printf("Personagem criado!\n");
+    printf("STR: %d, DEX: %d, INT: %d, VIT: %d, HP: %d/%d\n",
+           personagemFinal.STR, personagemFinal.DEX,
+           personagemFinal.INT, personagemFinal.VIT,
+           personagemFinal.HP, personagemFinal.HP_MAX);
+}
+
+void atualizarTextoStats(SDL_Renderer* ren, TTF_Font* fnt) {
+    char buffer[100];
+    SDL_Color corBranco = {255, 255, 255, 255};
+    SDL_Color corVerde = {0, 255, 0, 255};
+    SDL_Color corVermelho = {255, 0, 0, 255};
+
+    // Pontos disponíveis
+    snprintf(buffer, sizeof(buffer), "Pontos Disponiveis: %d",
+             personagemCriacao.pontosDisponiveis);
+    updateText(textos_globais, ren, fnt, "pontos_disponiveis",
+               buffer, (personagemCriacao.pontosDisponiveis > 0) ? corVerde : corVermelho);
+
+    // Força
+    snprintf(buffer, sizeof(buffer), "FORCA: %d", personagemCriacao.STR);
+    updateText(textos_globais, ren, fnt, "stat_forca", buffer, corBranco);
+
+    // Destreza
+    snprintf(buffer, sizeof(buffer), "DESTREZA: %d", personagemCriacao.DEX);
+    updateText(textos_globais, ren, fnt, "stat_destreza", buffer, corBranco);
+
+    // Inteligência
+    snprintf(buffer, sizeof(buffer), "INTELIGENCIA: %d", personagemCriacao.INT);
+    updateText(textos_globais, ren, fnt, "stat_inteligencia", buffer, corBranco);
+
+    // Vitalidade
+    snprintf(buffer, sizeof(buffer), "VITALIDADE: %d", personagemCriacao.VIT);
+    updateText(textos_globais, ren, fnt, "stat_vitalidade", buffer, corBranco);
+
+    // HP calculado
+    int hpCalculado = 10 + (personagemCriacao.VIT * 2);
+    snprintf(buffer, sizeof(buffer), "HP FINAL: %d", hpCalculado);
+    updateText(textos_globais, ren, fnt, "hp_final", buffer, corVerde);
+}
+
+void limparMensagemErroPersonagem(SDL_Renderer* ren, TTF_Font* fnt) {
+
+    SDL_Color branco = {255, 255, 255, 255};
+    updateText(textos_globais, ren, fnt, "mensagem_batalha", " ", branco);
+}
+
+
+
+// ========== FUNÇÃO PRINCIPAL ==========
+int main(int argc, char* args[]) {
     srand(time(NULL));
 
     SDL_Init(SDL_INIT_EVERYTHING);
-    TTF_Init(); // Inicializar TTF
+    TTF_Init();
 
     SDL_Window* win = SDL_CreateWindow("Carmesim Quest",
                          SDL_WINDOWPOS_UNDEFINED,
                          SDL_WINDOWPOS_UNDEFINED,
-                         800, 600, SDL_WINDOW_SHOWN
-                      );
+                         800, 600, SDL_WINDOW_SHOWN);
 
     SDL_Renderer* ren = SDL_CreateRenderer(win, -1, SDL_RENDERER_ACCELERATED);
 
-    // Carregar a fonte uma única vez no início
-    TTF_Font* fnt = TTF_OpenFont("antiquity-print.ttf", 24);
-    SDL_Color corTexto = { 0, 0, 0, 255};
+    // Carregar fonte
+    TTF_Font* fnt = TTF_OpenFont("minecraft_font.ttf", 15);
+    SDL_Color corTexto = {0, 0, 0, 255};
     SDL_Color ver = {255, 0, 0, 255};
     SDL_Color gold = {255, 215, 0, 255};
     SDL_Color yel = {255, 255, 0, 255};
-    SDL_Color branco = { 255, 255, 255, 255};
+    SDL_Color branco = {255, 255, 255, 255};
 
-    // ========== CORES PARA BOTÕES ==========
+    // Cores para botões
     SDL_Color corVerde = {0, 128, 0, 255};      // Pantano
     SDL_Color corMarrom = {139, 69, 19, 255};   // Planície
     SDL_Color corDourado = {184, 134, 11, 255}; // Castelo
@@ -800,9 +977,13 @@ int main (int argc, char* args[])
     SDL_Color corAzul = {30, 144, 255, 255};    // Menu
     SDL_Color corBorda = {255, 255, 255, 255};  // Borda branca
     SDL_Color corTextoBtn = {255, 255, 255, 255};  // Texto branco
-    SDL_Color corTransparente = {0, 0, 0, 0}; //para botoes tranparentes
+    SDL_Color corTransparente = {0, 0, 0, 0}; // para botões transparentes
 
-     // ========== DECLARAÇÃO DOS BOTÕES ==========
+    // Inicializar listas globais
+    imagens_globais = criarListaImagens();
+    textos_globais = createTextList();
+
+    // ========== DECLARAÇÃO DOS BOTÕES ==========
     // Botões do Menu Principal
     Botao btnIniciar, btnSair;
 
@@ -824,17 +1005,19 @@ int main (int argc, char* args[])
 
     // Botões da rosa dos ventos
     Botao btnOeste, btnLeste, btnNorte, btnSul;
-    
+
     // Botões direções planicie
     Botao btnEntrarPlanicie;
-    
+
     // Botões direções pantano
     Botao btnEntrarPantano;
 
+    // Botoes tela de personagem
+    Botao btnAvancar, btnAddForca, btnSubForca, btnAddDestreza, btnSubDestreza, btnAddInteligencia, btnSubInteligencia, btnAddVitalidade, btnSubVitalidade;
+    Botao btnReset;
 
-    // Inicializar listas globais
-    imagens_globais = criarListaImagens();
-    textos_globais = createTextList();
+    // Botoes tela de itens
+    Botao btnJogar;
 
     // Adicionar TODAS as imagens
     adicionarImagem(imagens_globais, criarObjetoImagem("Castle.png", ren, 0, 0, 800, 600), "Menu_Principal");
@@ -846,7 +1029,7 @@ int main (int argc, char* args[])
     adicionarImagem(imagens_globais, criarObjetoImagem("Terreo.png", ren, 0, 0, 800, 600), "Terreo");
     adicionarImagem(imagens_globais, criarObjetoImagem("Direcoes.png", ren, 0, 0, 800, 600), "Direcoes");
     adicionarImagem(imagens_globais, criarObjetoImagem("Oeste_pantano.png", ren, 0, 0, 800, 600), "Oeste_pantano");
-    adicionarImagem(imagens_globais, criarObjetoImagem("Oeste_planicie.png", ren, 0, 0, 800, 600), "Oeste_pantano");
+    adicionarImagem(imagens_globais, criarObjetoImagem("Oeste_planicie.png", ren, 0, 0, 800, 600), "Oeste_planicie");
     adicionarImagem(imagens_globais, criarObjetoImagem("PrimeiroAndar.png", ren, 0, 0, 800, 600), "PrimeiroAndar");
     adicionarImagem(imagens_globais, criarObjetoImagem("SegundoAndar.png", ren, 0, 0, 800, 600), "SegundoAndar");
     adicionarImagem(imagens_globais, criarObjetoImagem("SalaRei.png", ren, 0, 0, 800, 600), "SalaRei");
@@ -863,22 +1046,31 @@ int main (int argc, char* args[])
     adicionarImagem(imagens_globais, criarObjetoImagem("Interior_Caverna.png", ren, 0, 0, 800, 600), "Interior_Caverna");
     adicionarImagem(imagens_globais, criarObjetoImagem("Boss_Bruxa_Pantano.png", ren, 300, 150, 200, 300), "Boss_Bruxa_Pantano");
     adicionarImagem(imagens_globais, criarObjetoImagem("Boss_Fantasma_Pantano.png", ren, 0, 0, 800, 600), "Boss_Fantasma_Pantano");
-    adicionarImagem(imagens_globais, criarObjetoImagem("Boss_Monstro_Pantano.png", ren, 0, 0, 800, 600), "Boss_Monstro_Pantano");
+    adicionarImagem(imagens_globais, criarObjetoImagem("Regiao_Oeste_Pantano_BOSS.png", ren, 0, 0, 800, 600), "Regiao_boss_pantano");
     adicionarImagem(imagens_globais, criarObjetoImagem("Casa_Bruxa_Pantano.png", ren, 0, 0, 800, 600), "Casa_Bruxa_Pantano");
     adicionarImagem(imagens_globais, criarObjetoImagem("Fantasmas_Pantano.png", ren, 0, 0, 800, 600), "Fantasmas_Pantano");
     adicionarImagem(imagens_globais, criarObjetoImagem("Interior_Casa_Bruxa_Pantano.png", ren, 0, 0, 800, 600), "Interior_Casa_Bruxa_Pantano");
-    adicionarImagem(imagens_globais, criarObjetoImagem("Lago_Monstro_Pantano.png", ren, 0, 0, 800, 600), "Lago_Monstro_Pantano");
     adicionarImagem(imagens_globais, criarObjetoImagem("Monstro_Pantano.png", ren, 300, 150, 200, 300), "Monstro_Pantano");
     adicionarImagem(imagens_globais, criarObjetoImagem("Rei_Fantasma.png", ren, 300, 150, 200, 300), "Rei_Fantasma");
+    adicionarImagem(imagens_globais, criarObjetoImagem("Fundo_Decidir_Personagem.png", ren, 0, 0, 800, 600), "FundoSelecPers");
 
-    // Adicionar TODOS os textos (exemplo)
+    // Adicionar TODOS os textos
     adicionartexto(textos_globais, ren, fnt, "CARMESIM QUEST", ver, 280, 10, "titulo");
     adicionartexto(textos_globais, ren, fnt, "CARREGANDO", gold, 300, 10, "carregamento");
-    adicionartexto(textos_globais, ren, fnt, " ", branco, 300, 250, "mensagem_batalha");
+    adicionartexto(textos_globais, ren, fnt, " ", branco, 350, 250, "mensagem_batalha");
+
+    // ADICIONAR TEXTOS PARA TELA DE PERSONAGEM
+    adicionartexto(textos_globais, ren, fnt, "CRIACAO DE PERSONAGEM", gold, 250, 20, "titulo_criacao");
+    adicionartexto(textos_globais, ren, fnt, "Distribua 40 pontos entre os atributos", branco, 200, 60, "instrucoes");
+    adicionartexto(textos_globais, ren, fnt, "Pontos Disponiveis: 36", ver, 300, 100, "pontos_disponiveis");
+    adicionartexto(textos_globais, ren, fnt, "FORCA: 1", branco, 100, 150, "stat_forca");
+    adicionartexto(textos_globais, ren, fnt, "DESTREZA: 1", branco, 100, 200, "stat_destreza");
+    adicionartexto(textos_globais, ren, fnt, "INTELIGENCIA: 1", branco, 100, 250, "stat_inteligencia");
+    adicionartexto(textos_globais, ren, fnt, "VITALIDADE: 1", branco, 100, 300, "stat_vitalidade");
+    adicionartexto(textos_globais, ren, fnt, "HP FINAL: 12", ver, 100, 350, "hp_final");
 
     // ========== INICIALIZAR TODOS OS BOTÕES ==========
-
-   // Menu Principal
+    // Menu Principal
     btnIniciar = criarBotao(200, 500, 190, 40, "INICIAR", corAzul, corBorda, corTextoBtn);
     btnSair = criarBotao(500, 500, 100, 40, "SAIR", corVermelho, corBorda, corTextoBtn);
 
@@ -918,355 +1110,433 @@ int main (int argc, char* args[])
     btnLeste = criarBotao(600, 250, 150, 100, "", corTransparente, corTransparente, corTransparente);
     btnNorte = criarBotao(300, 25, 200, 100, "", corTransparente, corTransparente, corTransparente);
     btnSul = criarBotao(300, 475, 200, 100, "", corTransparente, corTransparente, corTransparente);
-    
-    //Direções Planície
+
+    // Direções Planície
     btnEntrarPlanicie = criarBotao(10, 560, 150, 40, "ENTRAR", corVermelho, corBorda, corTextoBtn);
-    
-    //Direções Pantano
+
+    // Direções Pantano
     btnEntrarPantano = criarBotao(10, 560, 150, 40, "ENTRAR", corVerde, corBorda, corTextoBtn);
-    
+
+    // Botões da tela de personagem
+    btnAvancar = criarBotao(550, 500, 150, 40, "AVANCAR", corAzul, corBorda, corTextoBtn);
+    btnAddForca = criarBotao(250, 145, 30, 30, "+", corVerde, corBorda, corTextoBtn);
+    btnSubForca = criarBotao(285, 145, 30, 30, "-", corVermelho, corBorda, corTextoBtn);
+    btnAddDestreza = criarBotao(250, 195, 30, 30, "+", corVerde, corBorda, corTextoBtn);
+    btnSubDestreza = criarBotao(285, 195, 30, 30, "-", corVermelho, corBorda, corTextoBtn);
+    btnAddInteligencia = criarBotao(250, 245, 30, 30, "+", corVerde, corBorda, corTextoBtn);
+    btnSubInteligencia = criarBotao(285, 245, 30, 30, "-", corVermelho, corBorda, corTextoBtn);
+    btnAddVitalidade = criarBotao(250, 295, 30, 30, "+", corVerde, corBorda, corTextoBtn);
+    btnSubVitalidade = criarBotao(285, 295, 30, 30, "-", corVermelho, corBorda, corTextoBtn);
+    btnReset = criarBotao(400, 500, 100, 40, "RESET", corVermelho, corBorda, corTextoBtn);
+
+    // Botões da tela de Itens:
+    btnJogar = criarBotao(400, 500, 150, 40, "JOGAR", corAzul, corBorda, corTextoBtn);
+
+    // Inicializar stats de criação
+    inicializarStatsCriacao();
+
     // Iniciar no menu
     mudarEstado(ESTADO_MENU_PRINCIPAL);
 
-    //cria o protagonista
-    CHC prtg;
-    prtg.HP = 20;
-    prtg.STR = 5;
-    prtg.INT = 5;
-    prtg.DEX = 10;
-    prtg.vivo = true;
-
-    //gerais
+    // Variáveis gerais
     int stop = 0;
     int espera = 500;
     int mouseX, mouseY;
-    int red = 255;
-    int blue = 255;
-    int green = 255;
     SDL_Event evt;
     Uint32 tempo_carregamento = 0;
-    int aux_carregar = 0;
 
-    while(stop == 0){
+    while (stop == 0) {
         Uint32 antes = SDL_GetTicks();
-
         int isevt = SDL_WaitEventTimeout(&evt, espera);
 
-        if(isevt){
+        if (isevt) {
             espera -= (SDL_GetTicks() - antes);
 
-            if(evt.type == SDL_KEYDOWN){
-                if(SDLK_ESCAPE){
-                    stop++;
-                }
-            }
-
-            if(evt.type == SDL_QUIT){
+            if (evt.type == SDL_KEYDOWN && evt.key.keysym.sym == SDLK_ESCAPE) {
                 stop++;
             }
 
-        // ========== EVENTOS DE MOUSE SIMPLIFICADOS ==========
-        if(evt.type == SDL_MOUSEBUTTONDOWN){
-            SDL_GetMouseState(&mouseX, &mouseY);
-
-            // Menu Principal
-            if(estado_atual == ESTADO_MENU_PRINCIPAL) {
-                if(cliqueBotao(btnIniciar, mouseX, mouseY)) {
-                    mudarEstado(ESTADO_TELA_CARREGAMENTO);
-                }
-                if(cliqueBotao(btnSair, mouseX, mouseY)) {
-                    stop = 1;
-                }
+            if (evt.type == SDL_QUIT) {
+                stop++;
             }
 
-            // Vila
-            if(estado_atual == ESTADO_VILA) {
-                if(cliqueBotao(btnArena, mouseX, mouseY)) {
-                    mudarEstado(ESTADO_ARENA);
-                    iniciarBatalha(&prtg);
-                }
-                if(cliqueBotao(btnMapa, mouseX, mouseY)) {
-                    printf("clicou");
-                    mudarEstado(ESTADO_MAPA);
-                }
+            if(evt.type == SDL_KEYDOWN && evt.key.keysym.sym == SDLK_BACKSPACE){
+                mudarEstado(ESTADO_MENU_PRINCIPAL);
             }
 
-            // Mapa
-            if(estado_atual == ESTADO_MAPA) {
-                if(cliqueBotao(btnPantano, mouseX, mouseY)) {
-                    mudarEstado(ESTADO_PANTANO);
-                }
-                if(cliqueBotao(btnPlanicie, mouseX, mouseY)) {
-                    mudarEstado(ESTADO_PLANICIE);
-                }
-                if(cliqueBotao(btnCastelo, mouseX, mouseY)) {
-                    mudarEstado(ESTADO_TERREO);
-                }
-                if(cliqueBotao(btnVoltarMapa, mouseX, mouseY)) {
-                    mudarEstado(ESTADO_VILA);
-                }
-            }
+            // ========== EVENTOS DE MOUSE ==========
+            if (evt.type == SDL_MOUSEBUTTONDOWN) {
+                SDL_GetMouseState(&mouseX, &mouseY);
 
-            // Pantano
-            if(estado_atual == ESTADO_PANTANO) {
-                if(cliqueBotao(btnRegioesPantano, mouseX, mouseY)) {
-                    mudarEstado(ESTADO_ROSA_DOS_VENTOS_PANTANO);
-                }
-                if(cliqueBotao(btnVoltarPantano, mouseX, mouseY)) {
-                    mudarEstado(ESTADO_MAPA);
-                }
-            }
-
-            //Oeste pantano
-            if(estado_atual == ESTADO_OESTE_PANTANO){
-                if(cliqueBotao(btnVoltarPantano, mouseX, mouseY)){
-                    mudarEstado(ESTADO_PANTANO);
-                }
-            }
-
-            // Planície
-            if(estado_atual == ESTADO_PLANICIE) {
-                if(cliqueBotao(btnRegioesPlanicie, mouseX, mouseY)) {
-                    mudarEstado(ESTADO_ROSA_DOS_VENTOS_PLANICIE);
-                }
-                if(cliqueBotao(btnVoltarPlanicie, mouseX, mouseY)) {
-                    mudarEstado(ESTADO_MAPA);
-                }
-            }
-            
-            // Norte Planície
-            if(estado_atual == ESTADO_NORTE_PLANICIE) {
-                if(cliqueBotao(btnEntrarPlanicie, mouseX, mouseY)) {
-                    mudarEstado(ESTADO_BOSS_NORTE_PLANICIE);
-                }
-                if(cliqueBotao(btnVoltarPlanicie, mouseX, mouseY)) {
-                    mudarEstado(ESTADO_PLANICIE);
-                }
-            }
-            
-            // Sul Planície
-            if(estado_atual == ESTADO_SUL_PLANICIE) {
-                if(cliqueBotao(btnEntrarPlanicie, mouseX, mouseY)) {
-                    mudarEstado(ESTADO_BOSS_SUL_PLANICIE);
-                }
-                if(cliqueBotao(btnVoltarPlanicie, mouseX, mouseY)) {
-                    mudarEstado(ESTADO_PLANICIE);
-                }
-            }
-            
-            // Oeste Planície
-            if(estado_atual == ESTADO_OESTE_PLANICIE) {
-                if(cliqueBotao(btnEntrarPlanicie, mouseX, mouseY)) {
-                    mudarEstado(ESTADO_BOSS_OESTE_PLANICIE);
-                }
-                if(cliqueBotao(btnVoltarPlanicie, mouseX, mouseY)) {
-                    mudarEstado(ESTADO_PLANICIE);
-                }
-            }
-            
-            // Boss Norte Planície
-            if(estado_atual == ESTADO_BOSS_NORTE_PLANICIE) {
-                if(cliqueBotao(btnVoltarPlanicie, mouseX, mouseY)) {
-                    mudarEstado(ESTADO_NORTE_PLANICIE);
-                }
-            }
-            
-            // Boss Sul Planície
-            if(estado_atual == ESTADO_BOSS_SUL_PLANICIE) {
-                if(cliqueBotao(btnVoltarPlanicie, mouseX, mouseY)) {
-                    mudarEstado(ESTADO_SUL_PLANICIE);
-                }
-            }
-            
-            // Boss Oeste Planície
-            if(estado_atual == ESTADO_BOSS_OESTE_PLANICIE) {
-                if(cliqueBotao(btnVoltarPlanicie, mouseX, mouseY)) {
-                    mudarEstado(ESTADO_OESTE_PLANICIE);
-                }
-            }
-            
-            // Norte Pantano
-            if(estado_atual == ESTADO_NORTE_PANTANO) {
-                if(cliqueBotao(btnEntrarPantano, mouseX, mouseY)) {
-                    mudarEstado(ESTADO_BOSS_NORTE_PANTANO);
-                }
-                if(cliqueBotao(btnVoltarPantano, mouseX, mouseY)) {
-                    mudarEstado(ESTADO_PANTANO);
-                }
-            }
-            
-            // Sul Pantano
-            if(estado_atual == ESTADO_SUL_PANTANO) {
-                if(cliqueBotao(btnEntrarPantano, mouseX, mouseY)) {
-                    mudarEstado(ESTADO_BOSS_SUL_PANTANO);
-                }
-                if(cliqueBotao(btnVoltarPantano, mouseX, mouseY)) {
-                    mudarEstado(ESTADO_PANTANO);
-                }
-            }
-            
-            // Oeste Planície
-            if(estado_atual == ESTADO_OESTE_PANTANO) {
-                if(cliqueBotao(btnEntrarPantano, mouseX, mouseY)) {
-                    mudarEstado(ESTADO_BOSS_OESTE_PANTANO);
-                }
-                if(cliqueBotao(btnVoltarPantano, mouseX, mouseY)) {
-                    mudarEstado(ESTADO_PANTANO);
-                }
-            }
-            
-            // Boss Norte Pantano
-            if(estado_atual == ESTADO_BOSS_NORTE_PANTANO) {
-                if(cliqueBotao(btnVoltarPantano, mouseX, mouseY)) {
-                    mudarEstado(ESTADO_NORTE_PANTANO);
-                }
-            }
-            
-            // Boss Sul Pantano
-            if(estado_atual == ESTADO_BOSS_SUL_PANTANO) {
-                if(cliqueBotao(btnVoltarPantano, mouseX, mouseY)) {
-                    mudarEstado(ESTADO_SUL_PANTANO);
-                }
-            }
-            
-            // Boss Oeste Pantano
-            if(estado_atual == ESTADO_BOSS_OESTE_PANTANO) {
-                if(cliqueBotao(btnVoltarPantano, mouseX, mouseY)) {
-                    mudarEstado(ESTADO_OESTE_PANTANO);
-                }
-            }
-
-            // Castelo - Terreo
-            if(estado_atual == ESTADO_TERREO) {
-                if(cliqueBotao(btnPrimeiroAndar, mouseX, mouseY)) {
-                    mudarEstado(ESTADO_PRIMEIRO_ANDAR);
-                }
-                if(cliqueBotao(btnSegundoAndar, mouseX, mouseY)) {
-                    mudarEstado(ESTADO_SEGUNDO_ANDAR);
-                }
-                if(cliqueBotao(btnSalaRei, mouseX, mouseY)) {
-                    mudarEstado(ESTADO_SALA_REI);
-                }
-                if(cliqueBotao(btnVoltarCastelo, mouseX, mouseY)) {
-                    mudarEstado(ESTADO_MAPA);
-                }
-            }
-
-            // Castelo - Primeiro Andar
-            if(estado_atual == ESTADO_PRIMEIRO_ANDAR) {
-                if(cliqueBotao(btnTerreo, mouseX, mouseY)) {
-                    mudarEstado(ESTADO_TERREO);
-                }
-                if(cliqueBotao(btnSegundoAndar, mouseX, mouseY)) {
-                    mudarEstado(ESTADO_SEGUNDO_ANDAR);
-                }
-                if(cliqueBotao(btnSalaRei, mouseX, mouseY)) {
-                    mudarEstado(ESTADO_SALA_REI);
-                }
-                if(cliqueBotao(btnVoltarCastelo, mouseX, mouseY)) {
-                    mudarEstado(ESTADO_MAPA);
-                }
-            }
-
-            // Castelo - Segundo Andar
-            if(estado_atual == ESTADO_SEGUNDO_ANDAR) {
-                if(cliqueBotao(btnTerreo, mouseX, mouseY)) {
-                    mudarEstado(ESTADO_TERREO);
-                }
-                if(cliqueBotao(btnPrimeiroAndar, mouseX, mouseY)) {
-                    mudarEstado(ESTADO_PRIMEIRO_ANDAR);
-                }
-                if(cliqueBotao(btnSalaRei, mouseX, mouseY)) {
-                    mudarEstado(ESTADO_SALA_REI);
-                }
-                if(cliqueBotao(btnVoltarCastelo, mouseX, mouseY)) {
-                    mudarEstado(ESTADO_MAPA);
-                }
-            }
-
-            // Castelo - Sala do Rei
-            if(estado_atual == ESTADO_SALA_REI) {
-                if(cliqueBotao(btnTerreo, mouseX, mouseY)) {
-                    mudarEstado(ESTADO_TERREO);
-                }
-                if(cliqueBotao(btnPrimeiroAndar, mouseX, mouseY)) {
-                    mudarEstado(ESTADO_PRIMEIRO_ANDAR);
-                }
-                if(cliqueBotao(btnSegundoAndar, mouseX, mouseY)) {
-                    mudarEstado(ESTADO_SEGUNDO_ANDAR);
-                }
-                if(cliqueBotao(btnVoltarCastelo, mouseX, mouseY)) {
-                    mudarEstado(ESTADO_MAPA);
+                // Menu Principal
+                if (estado_atual == ESTADO_MENU_PRINCIPAL) {
+                    if (cliqueBotao(btnIniciar, mouseX, mouseY)) {
+                        personagemCriado = false;
+                        inicializarStatsCriacao();
+                        mudarEstado(ESTADO_TELA_PERSONAGEM);
+                        // Atualizar textos com valores iniciais
+                        atualizarTextoStats(ren, fnt);
+                    }
+                    if (cliqueBotao(btnSair, mouseX, mouseY)) {
+                        stop = 1;
                     }
                 }
 
-            //Rosa dos ventos - Pântano
-            if(estado_atual == ESTADO_ROSA_DOS_VENTOS_PANTANO){
-                if(cliqueBotao(btnOeste, mouseX, mouseY)){
-                    mudarEstado(ESTADO_OESTE_PANTANO);
-                }
-                if(cliqueBotao(btnLeste, mouseX, mouseY)){
-                    mudarEstado(ESTADO_LESTE_PANTANO);
-                }
-                if(cliqueBotao(btnNorte, mouseX, mouseY)){
-                    mudarEstado(ESTADO_NORTE_PANTANO);
-                }
-                if(cliqueBotao(btnSul, mouseX, mouseY)){
-                    mudarEstado(ESTADO_SUL_PANTANO);
-                }
-            }
-            
-            //Rosa dos ventos - Planície
-            if(estado_atual == ESTADO_ROSA_DOS_VENTOS_PLANICIE){
-                if(cliqueBotao(btnOeste, mouseX, mouseY)){
-                    mudarEstado(ESTADO_OESTE_PLANICIE);
-                }
-                if(cliqueBotao(btnLeste, mouseX, mouseY)){
-                    mudarEstado(ESTADO_LESTE_PLANICIE);
-                }
-                if(cliqueBotao(btnNorte, mouseX, mouseY)){
-                    mudarEstado(ESTADO_NORTE_PLANICIE);
-                }
-                if(cliqueBotao(btnSul, mouseX, mouseY)){
-                    mudarEstado(ESTADO_SUL_PLANICIE);
-                }
-            }
-
-                // Batalha na Arena
-                if(estado_atual == ESTADO_ARENA && em_batalha) {
-                    if(cliqueBotao(btnAtacar, mouseX, mouseY)) {
-                        turno_atual++;
-                        if(turno_atual % 2 == 1) {
-                            ataqueJogador(&prtg, &inimigo_atual);
+                // Tela de Personagens
+                if(estado_atual == ESTADO_TELA_PERSONAGEM){
+                    if(cliqueBotao(btnAvancar, mouseX, mouseY)){
+                        if (personagemCriacao.pontosDisponiveis == 0) {
+                            finalizarPersonagem();
+                            mudarEstado(ESTADO_TELA_ITENS);
+                        } else {
+                        // Atualizar mensagem de erro
+                        updateText(textos_globais, ren, fnt, "mensagem_batalha", "Distribua todos os pontos primeiro!", ver);
                         }
-                        else {
-                            ataqueInimigo(&prtg, &inimigo_atual);
+                    }
+
+                    // Botões de força
+                    if (cliqueBotao(btnAddForca, mouseX, mouseY)) {
+                        aumentarAtributo(&personagemCriacao.STR);
+                        atualizarTextoStats(ren, fnt);
+                        limparMensagemErroPersonagem(ren, fnt);
+                    }
+                    if (cliqueBotao(btnSubForca, mouseX, mouseY)) {
+                        diminuirAtributo(&personagemCriacao.STR);
+                        atualizarTextoStats(ren, fnt);
+                        limparMensagemErroPersonagem(ren, fnt);
+                    }
+
+                    // Botões de destreza
+                    if (cliqueBotao(btnAddDestreza, mouseX, mouseY)) {
+                        aumentarAtributo(&personagemCriacao.DEX);
+                        atualizarTextoStats(ren, fnt);
+                        limparMensagemErroPersonagem(ren, fnt);
+                    }
+                    if (cliqueBotao(btnSubDestreza, mouseX, mouseY)) {
+                        diminuirAtributo(&personagemCriacao.DEX);
+                        atualizarTextoStats(ren, fnt);
+                        limparMensagemErroPersonagem(ren, fnt);
+                    }
+
+                    // Botões de inteligência
+                    if (cliqueBotao(btnAddInteligencia, mouseX, mouseY)) {
+                        aumentarAtributo(&personagemCriacao.INT);
+                        atualizarTextoStats(ren, fnt);
+                        limparMensagemErroPersonagem(ren, fnt);
+                    }
+                    if (cliqueBotao(btnSubInteligencia, mouseX, mouseY)) {
+                        diminuirAtributo(&personagemCriacao.INT);
+                        atualizarTextoStats(ren, fnt);
+                        limparMensagemErroPersonagem(ren, fnt);
+                    }
+
+                    // Botões de vitalidade
+                    if (cliqueBotao(btnAddVitalidade, mouseX, mouseY)) {
+                        aumentarAtributo(&personagemCriacao.VIT);
+                        atualizarTextoStats(ren, fnt);
+                        limparMensagemErroPersonagem(ren, fnt);
+                    }
+                    if (cliqueBotao(btnSubVitalidade, mouseX, mouseY)) {
+                        diminuirAtributo(&personagemCriacao.VIT);
+                        atualizarTextoStats(ren, fnt);
+                        limparMensagemErroPersonagem(ren, fnt);
+                    }
+
+                    // Botão de reset
+                    if (cliqueBotao(btnReset, mouseX, mouseY)) {
+                        inicializarStatsCriacao();
+                        atualizarTextoStats(ren, fnt);
+                        limparMensagemErroPersonagem(ren, fnt);
+                    }
+                }
+
+                // tela de itens
+                if(estado_atual == ESTADO_TELA_ITENS){
+                    if(cliqueBotao(btnJogar, mouseX, mouseY)){
+                        mudarEstado(ESTADO_VILA);
+                    }
+                }
+
+                // Vila
+                if (estado_atual == ESTADO_VILA) {
+                    if (cliqueBotao(btnArena, mouseX, mouseY)) {
+                        mudarEstado(ESTADO_ARENA);
+                        iniciarBatalha(&personagemFinal);
+                    }
+                    if (cliqueBotao(btnMapa, mouseX, mouseY)) {
+                        mudarEstado(ESTADO_MAPA);
+                    }
+                }
+
+                // Mapa
+                if (estado_atual == ESTADO_MAPA) {
+                    if (cliqueBotao(btnPantano, mouseX, mouseY)) {
+                        mudarEstado(ESTADO_PANTANO);
+                    }
+                    if (cliqueBotao(btnPlanicie, mouseX, mouseY)) {
+                        mudarEstado(ESTADO_PLANICIE);
+                    }
+                    if (cliqueBotao(btnCastelo, mouseX, mouseY)) {
+                        mudarEstado(ESTADO_TERREO);
+                    }
+                    if (cliqueBotao(btnVoltarMapa, mouseX, mouseY)) {
+                        mudarEstado(ESTADO_VILA);
+                    }
+                }
+
+                // ========== EVENTOS DO PÂNTANO ==========
+                if (estado_atual == ESTADO_PANTANO) {
+                    if (cliqueBotao(btnRegioesPantano, mouseX, mouseY)) {
+                        mudarEstado(ESTADO_ROSA_DOS_VENTOS_PANTANO);
+                    }
+                    if (cliqueBotao(btnVoltarPantano, mouseX, mouseY)) {
+                        mudarEstado(ESTADO_MAPA);
+                    }
+                }
+
+                if (estado_atual == ESTADO_OESTE_PANTANO) {
+                    if (cliqueBotao(btnVoltarPantano, mouseX, mouseY)) {
+                        mudarEstado(ESTADO_PANTANO);
+                    }
+                }
+
+                if (estado_atual == ESTADO_NORTE_PANTANO) {
+                    if (cliqueBotao(btnEntrarPantano, mouseX, mouseY)) {
+                        mudarEstado(ESTADO_BOSS_NORTE_PANTANO);
+                    }
+                    if (cliqueBotao(btnVoltarPantano, mouseX, mouseY)) {
+                        mudarEstado(ESTADO_PANTANO);
+                    }
+                }
+
+                if (estado_atual == ESTADO_SUL_PANTANO) {
+                    if (cliqueBotao(btnEntrarPantano, mouseX, mouseY)) {
+                        mudarEstado(ESTADO_BOSS_SUL_PANTANO);
+                    }
+                    if (cliqueBotao(btnVoltarPantano, mouseX, mouseY)) {
+                        mudarEstado(ESTADO_PANTANO);
+                    }
+                }
+
+                if (estado_atual == ESTADO_OESTE_PANTANO) {
+                    if (cliqueBotao(btnEntrarPantano, mouseX, mouseY)) {
+                        mudarEstado(ESTADO_BOSS_OESTE_PANTANO);
+                    }
+                    if (cliqueBotao(btnVoltarPantano, mouseX, mouseY)) {
+                        mudarEstado(ESTADO_PANTANO);
+                    }
+                }
+
+                if (estado_atual == ESTADO_BOSS_NORTE_PANTANO) {
+                    if (cliqueBotao(btnVoltarPantano, mouseX, mouseY)) {
+                        mudarEstado(ESTADO_NORTE_PANTANO);
+                    }
+                }
+
+                if (estado_atual == ESTADO_BOSS_SUL_PANTANO) {
+                    if (cliqueBotao(btnVoltarPantano, mouseX, mouseY)) {
+                        mudarEstado(ESTADO_SUL_PANTANO);
+                    }
+                }
+
+                if (estado_atual == ESTADO_BOSS_OESTE_PANTANO) {
+                    if (cliqueBotao(btnVoltarPantano, mouseX, mouseY)) {
+                        mudarEstado(ESTADO_OESTE_PANTANO);
+                    }
+                }
+
+                if (estado_atual == ESTADO_LESTE_PANTANO) {
+                    if (cliqueBotao(btnVoltarPantano, mouseX, mouseY)) {
+                        mudarEstado(ESTADO_PANTANO);
+                    }
+                }
+
+                // ========== EVENTOS DA PLANÍCIE ==========
+                if (estado_atual == ESTADO_PLANICIE) {
+                    if (cliqueBotao(btnRegioesPlanicie, mouseX, mouseY)) {
+                        mudarEstado(ESTADO_ROSA_DOS_VENTOS_PLANICIE);
+                    }
+                    if (cliqueBotao(btnVoltarPlanicie, mouseX, mouseY)) {
+                        mudarEstado(ESTADO_MAPA);
+                    }
+                }
+
+                if (estado_atual == ESTADO_NORTE_PLANICIE) {
+                    if (cliqueBotao(btnEntrarPlanicie, mouseX, mouseY)) {
+                        mudarEstado(ESTADO_BOSS_NORTE_PLANICIE);
+                    }
+                    if (cliqueBotao(btnVoltarPlanicie, mouseX, mouseY)) {
+                        mudarEstado(ESTADO_PLANICIE);
+                    }
+                }
+
+                if (estado_atual == ESTADO_SUL_PLANICIE) {
+                    if (cliqueBotao(btnEntrarPlanicie, mouseX, mouseY)) {
+                        mudarEstado(ESTADO_BOSS_SUL_PLANICIE);
+                    }
+                    if (cliqueBotao(btnVoltarPlanicie, mouseX, mouseY)) {
+                        mudarEstado(ESTADO_PLANICIE);
+                    }
+                }
+
+                if (estado_atual == ESTADO_OESTE_PLANICIE) {
+                    if (cliqueBotao(btnEntrarPlanicie, mouseX, mouseY)) {
+                        mudarEstado(ESTADO_BOSS_OESTE_PLANICIE);
+                    }
+                    if (cliqueBotao(btnVoltarPlanicie, mouseX, mouseY)) {
+                        mudarEstado(ESTADO_PLANICIE);
+                    }
+                }
+
+                if (estado_atual == ESTADO_BOSS_NORTE_PLANICIE) {
+                    if (cliqueBotao(btnVoltarPlanicie, mouseX, mouseY)) {
+                        mudarEstado(ESTADO_NORTE_PLANICIE);
+                    }
+                }
+
+                if (estado_atual == ESTADO_BOSS_SUL_PLANICIE) {
+                    if (cliqueBotao(btnVoltarPlanicie, mouseX, mouseY)) {
+                        mudarEstado(ESTADO_SUL_PLANICIE);
+                    }
+                }
+
+                if (estado_atual == ESTADO_BOSS_OESTE_PLANICIE) {
+                    if (cliqueBotao(btnVoltarPlanicie, mouseX, mouseY)) {
+                        mudarEstado(ESTADO_OESTE_PLANICIE);
+                    }
+                }
+
+                if (estado_atual == ESTADO_LESTE_PLANICIE) {
+                    if (cliqueBotao(btnVoltarPlanicie, mouseX, mouseY)) {
+                        mudarEstado(ESTADO_PLANICIE);
+                    }
+                }
+
+                // ========== EVENTOS DO CASTELO ==========
+                if (estado_atual == ESTADO_TERREO) {
+                    if (cliqueBotao(btnPrimeiroAndar, mouseX, mouseY)) {
+                        mudarEstado(ESTADO_PRIMEIRO_ANDAR);
+                    }
+                    if (cliqueBotao(btnSegundoAndar, mouseX, mouseY)) {
+                        mudarEstado(ESTADO_SEGUNDO_ANDAR);
+                    }
+                    if (cliqueBotao(btnSalaRei, mouseX, mouseY)) {
+                        mudarEstado(ESTADO_SALA_REI);
+                    }
+                    if (cliqueBotao(btnVoltarCastelo, mouseX, mouseY)) {
+                        mudarEstado(ESTADO_MAPA);
+                    }
+                }
+
+                if (estado_atual == ESTADO_PRIMEIRO_ANDAR) {
+                    if (cliqueBotao(btnTerreo, mouseX, mouseY)) {
+                        mudarEstado(ESTADO_TERREO);
+                    }
+                    if (cliqueBotao(btnSegundoAndar, mouseX, mouseY)) {
+                        mudarEstado(ESTADO_SEGUNDO_ANDAR);
+                    }
+                    if (cliqueBotao(btnSalaRei, mouseX, mouseY)) {
+                        mudarEstado(ESTADO_SALA_REI);
+                    }
+                    if (cliqueBotao(btnVoltarCastelo, mouseX, mouseY)) {
+                        mudarEstado(ESTADO_MAPA);
+                    }
+                }
+
+                if (estado_atual == ESTADO_SEGUNDO_ANDAR) {
+                    if (cliqueBotao(btnTerreo, mouseX, mouseY)) {
+                        mudarEstado(ESTADO_TERREO);
+                    }
+                    if (cliqueBotao(btnPrimeiroAndar, mouseX, mouseY)) {
+                        mudarEstado(ESTADO_PRIMEIRO_ANDAR);
+                    }
+                    if (cliqueBotao(btnSalaRei, mouseX, mouseY)) {
+                        mudarEstado(ESTADO_SALA_REI);
+                    }
+                    if (cliqueBotao(btnVoltarCastelo, mouseX, mouseY)) {
+                        mudarEstado(ESTADO_MAPA);
+                    }
+                }
+
+                if (estado_atual == ESTADO_SALA_REI) {
+                    if (cliqueBotao(btnTerreo, mouseX, mouseY)) {
+                        mudarEstado(ESTADO_TERREO);
+                    }
+                    if (cliqueBotao(btnPrimeiroAndar, mouseX, mouseY)) {
+                        mudarEstado(ESTADO_PRIMEIRO_ANDAR);
+                    }
+                    if (cliqueBotao(btnSegundoAndar, mouseX, mouseY)) {
+                        mudarEstado(ESTADO_SEGUNDO_ANDAR);
+                    }
+                    if (cliqueBotao(btnVoltarCastelo, mouseX, mouseY)) {
+                        mudarEstado(ESTADO_MAPA);
+                    }
+                }
+
+                // ========== ROSA DOS VENTOS ==========
+                if (estado_atual == ESTADO_ROSA_DOS_VENTOS_PANTANO) {
+                    if (cliqueBotao(btnOeste, mouseX, mouseY)) {
+                        mudarEstado(ESTADO_OESTE_PANTANO);
+                    }
+                    if (cliqueBotao(btnLeste, mouseX, mouseY)) {
+                        mudarEstado(ESTADO_LESTE_PANTANO);
+                    }
+                    if (cliqueBotao(btnNorte, mouseX, mouseY)) {
+                        mudarEstado(ESTADO_NORTE_PANTANO);
+                    }
+                    if (cliqueBotao(btnSul, mouseX, mouseY)) {
+                        mudarEstado(ESTADO_SUL_PANTANO);
+                    }
+                }
+
+                if (estado_atual == ESTADO_ROSA_DOS_VENTOS_PLANICIE) {
+                    if (cliqueBotao(btnOeste, mouseX, mouseY)) {
+                        mudarEstado(ESTADO_OESTE_PLANICIE);
+                    }
+                    if (cliqueBotao(btnLeste, mouseX, mouseY)) {
+                        mudarEstado(ESTADO_LESTE_PLANICIE);
+                    }
+                    if (cliqueBotao(btnNorte, mouseX, mouseY)) {
+                        mudarEstado(ESTADO_NORTE_PLANICIE);
+                    }
+                    if (cliqueBotao(btnSul, mouseX, mouseY)) {
+                        mudarEstado(ESTADO_SUL_PLANICIE);
+                    }
+                }
+
+                // ========== BATALHA NA ARENA ==========
+                if (estado_atual == ESTADO_ARENA && em_batalha) {
+                    if (cliqueBotao(btnAtacar, mouseX, mouseY)) {
+                        turno_atual++;
+                        if (turno_atual % 2 == 1) {
+                            ataqueJogador(&personagemFinal, &inimigo_atual);
+                        } else {
+                            ataqueInimigo(&personagemFinal, &inimigo_atual);
                         }
                         updateText(textos_globais, ren, fnt, "mensagem_batalha", buffer_mensagem, branco);
 
-                        if(inimigo_atual.vivo && prtg.vivo) {
-                            ataqueInimigo(&prtg, &inimigo_atual);
+                        if (inimigo_atual.vivo && personagemFinal.vivo) {
+                            ataqueInimigo(&personagemFinal, &inimigo_atual);
                             updateText(textos_globais, ren, fnt, "mensagem_batalha", buffer_mensagem, branco);
                         }
 
-                        if(!inimigo_atual.vivo || !prtg.vivo) {
-                            if(!inimigo_atual.vivo) {
+                        if (!inimigo_atual.vivo || !personagemFinal.vivo) {
+                            if (!inimigo_atual.vivo) {
                                 strcpy(buffer_mensagem, "Vitoria! Inimigo derrotado!");
                                 em_batalha = false;
                                 mudarEstado(ESTADO_VILA);
-                            }
-                            else {
+                            } else {
                                 strcpy(buffer_mensagem, "Derrota! Voce foi morto!");
                                 stop++;
                             }
                             updateText(textos_globais, ren, fnt, "mensagem_batalha", buffer_mensagem, branco);
                         }
                     }
-                    if(cliqueBotao(btnBolsa, mouseX, mouseY)) {
+                    if (cliqueBotao(btnBolsa, mouseX, mouseY)) {
                         strcpy(buffer_mensagem, "Bolsa Vazia!");
                         updateText(textos_globais, ren, fnt, "mensagem_batalha", buffer_mensagem, branco);
                     }
-                    if(cliqueBotao(btnFugir, mouseX, mouseY)) {
+                    if (cliqueBotao(btnFugir, mouseX, mouseY)) {
                         strcpy(buffer_mensagem, "Voce fugiu da batalha!");
                         updateText(textos_globais, ren, fnt, "mensagem_batalha", buffer_mensagem, branco);
                         em_batalha = false;
@@ -1274,164 +1544,141 @@ int main (int argc, char* args[])
                     }
                 }
             }
-        // ========== FIM DOS NOVOS EVENTOS DE MOUSE ==========
         }
 
         // ========== LÓGICA DA TELA DE CARREGAMENTO ==========
-        if(estado_atual == ESTADO_TELA_CARREGAMENTO){
-            if(tempo_carregamento == 0) {
-                // Primeira vez na tela de carregamento
+        if (estado_atual == ESTADO_TELA_CARREGAMENTO) {
+            if (tempo_carregamento == 0) {
                 tempo_carregamento = SDL_GetTicks();
-            }
-            else if(SDL_GetTicks() - tempo_carregamento >= 1000) {
-                // Passou 1 segundo, muda para a vila
+            } else if (SDL_GetTicks() - tempo_carregamento >= 1000) {
                 mudarEstado(ESTADO_VILA);
-                tempo_carregamento = 0; // Reseta para próximo uso
+                tempo_carregamento = 0;
             }
-        }
-        else{
+        } else {
             espera = 500;
         }
 
-        // ========== RENDERIZAÇÃO SIMPLIFICADA ==========
+        // ========== RENDERIZAÇÃO ==========
         SDL_SetRenderDrawColor(ren, 0, 0, 0, 255);
         SDL_RenderClear(ren);
 
-        // Renderiza apenas o estado atual (sistema cuida da visibilidade)
         renderizarImagensVisiveis(imagens_globais, ren);
         RenderizarTodosOsTextosVisiveis(textos_globais, ren);
 
         // ========== RENDERIZAR BOTÕES POR ESTADO ==========
         // Menu Principal
-        if(estado_atual == ESTADO_MENU_PRINCIPAL) {
+        if (estado_atual == ESTADO_MENU_PRINCIPAL) {
             renderizarBotao(ren, btnIniciar, fnt);
             renderizarBotao(ren, btnSair, fnt);
         }
 
+        // Tela de Personagem
+        if(estado_atual == ESTADO_TELA_PERSONAGEM){
+            renderizarBotao(ren, btnAvancar, fnt);
+            renderizarBotao(ren, btnAddForca, fnt);
+            renderizarBotao(ren, btnSubForca, fnt);
+            renderizarBotao(ren, btnAddDestreza, fnt);
+            renderizarBotao(ren, btnSubDestreza, fnt);
+            renderizarBotao(ren, btnAddInteligencia, fnt);
+            renderizarBotao(ren, btnSubInteligencia, fnt);
+            renderizarBotao(ren, btnAddVitalidade, fnt);
+            renderizarBotao(ren, btnSubVitalidade, fnt);
+            renderizarBotao(ren, btnReset, fnt);
+        }
+
+        // Tela de Itens
+        if(estado_atual == ESTADO_TELA_ITENS){
+            renderizarBotao(ren, btnJogar, fnt);
+        }
+
         // Vila
-        if(estado_atual == ESTADO_VILA) {
+        if (estado_atual == ESTADO_VILA) {
             renderizarBotao(ren, btnLoja, fnt);
             renderizarBotao(ren, btnArena, fnt);
             renderizarBotao(ren, btnMapa, fnt);
         }
 
         // Mapa
-        if(estado_atual == ESTADO_MAPA) {
+        if (estado_atual == ESTADO_MAPA) {
             renderizarBotao(ren, btnPantano, fnt);
             renderizarBotao(ren, btnPlanicie, fnt);
             renderizarBotao(ren, btnCastelo, fnt);
             renderizarBotao(ren, btnVoltarMapa, fnt);
         }
 
-        // Pantano
-        if(estado_atual == ESTADO_PANTANO) {
+        // ========== RENDERIZAÇÃO DO PÂNTANO ==========
+        if (estado_atual == ESTADO_PANTANO) {
             renderizarBotao(ren, btnRegioesPantano, fnt);
             renderizarBotao(ren, btnVoltarPantano, fnt);
         }
 
-        // Oeste - Pantano
-        if(estado_atual == ESTADO_OESTE_PANTANO){
+        if (estado_atual == ESTADO_OESTE_PANTANO) {
             renderizarBotao(ren, btnVoltarPantano, fnt);
         }
 
-        // Planície
-        if(estado_atual == ESTADO_PLANICIE) {
+        if (estado_atual == ESTADO_NORTE_PANTANO ||
+            estado_atual == ESTADO_SUL_PANTANO ||
+            estado_atual == ESTADO_OESTE_PANTANO) {
+            renderizarBotao(ren, btnEntrarPantano, fnt);
+            renderizarBotao(ren, btnVoltarPantano, fnt);
+        }
+
+        if (estado_atual == ESTADO_BOSS_NORTE_PANTANO ||
+            estado_atual == ESTADO_BOSS_SUL_PANTANO ||
+            estado_atual == ESTADO_BOSS_OESTE_PANTANO) {
+            renderizarBotao(ren, btnVoltarPantano, fnt);
+        }
+
+        if (estado_atual == ESTADO_LESTE_PANTANO) {
+            renderizarBotao(ren, btnVoltarPantano, fnt);
+        }
+
+        // ========== RENDERIZAÇÃO DA PLANÍCIE ==========
+        if (estado_atual == ESTADO_PLANICIE) {
             renderizarBotao(ren, btnRegioesPlanicie, fnt);
             renderizarBotao(ren, btnVoltarPlanicie, fnt);
         }
-        
-        // Norte Planície
-        if(estado_atual == ESTADO_NORTE_PLANICIE) {
+
+        if (estado_atual == ESTADO_NORTE_PLANICIE ||
+            estado_atual == ESTADO_SUL_PLANICIE ||
+            estado_atual == ESTADO_OESTE_PLANICIE) {
             renderizarBotao(ren, btnEntrarPlanicie, fnt);
             renderizarBotao(ren, btnVoltarPlanicie, fnt);
-        }
-        
-        // Sul Planície
-        if(estado_atual == ESTADO_SUL_PLANICIE) {
-            renderizarBotao(ren, btnEntrarPlanicie, fnt);
-            renderizarBotao(ren, btnVoltarPlanicie, fnt);
-        }
-        
-        // Oeste Planície
-        if(estado_atual == ESTADO_OESTE_PLANICIE) {
-            renderizarBotao(ren, btnEntrarPlanicie, fnt);
-            renderizarBotao(ren, btnVoltarPlanicie, fnt);
-        }
-        
-        // Boss Norte Planície
-        if(estado_atual == ESTADO_BOSS_NORTE_PLANICIE) {
-            renderizarBotao(ren, btnVoltarPlanicie, fnt);
-        }
-        
-        // Boss Sul Planície
-        if(estado_atual == ESTADO_BOSS_SUL_PLANICIE) {
-            renderizarBotao(ren, btnVoltarPlanicie, fnt);
-        }
-        
-        // Boss Oeste Planície
-        if(estado_atual == ESTADO_BOSS_OESTE_PLANICIE) {
-            renderizarBotao(ren, btnVoltarPlanicie, fnt);
-        }
-        
-         // Norte Pantano
-        if(estado_atual == ESTADO_NORTE_PANTANO) {
-            renderizarBotao(ren, btnEntrarPantano, fnt);
-            renderizarBotao(ren, btnVoltarPantano, fnt);
-        }
-        
-        // Sul Pantano
-        if(estado_atual == ESTADO_SUL_PANTANO) {
-            renderizarBotao(ren, btnEntrarPantano, fnt);
-            renderizarBotao(ren, btnVoltarPantano, fnt);
-        }
-        
-        // Oeste Pantano
-        if(estado_atual == ESTADO_OESTE_PANTANO) {
-            renderizarBotao(ren, btnEntrarPantano, fnt);
-            renderizarBotao(ren, btnVoltarPantano, fnt);
-        }
-        
-        // Boss Norte Pantano
-        if(estado_atual == ESTADO_BOSS_NORTE_PANTANO) {
-            renderizarBotao(ren, btnVoltarPantano, fnt);
-        }
-        
-        // Boss Sul Pantano
-        if(estado_atual == ESTADO_BOSS_SUL_PANTANO) {
-            renderizarBotao(ren, btnVoltarPantano, fnt);
-        }
-        
-        // Boss Oeste Pantano
-        if(estado_atual == ESTADO_BOSS_OESTE_PANTANO) {
-            renderizarBotao(ren, btnVoltarPantano, fnt);
         }
 
-        // Castelo - Terreo
-        if(estado_atual == ESTADO_TERREO) {
+        if (estado_atual == ESTADO_BOSS_NORTE_PLANICIE ||
+            estado_atual == ESTADO_BOSS_SUL_PLANICIE ||
+            estado_atual == ESTADO_BOSS_OESTE_PLANICIE) {
+            renderizarBotao(ren, btnVoltarPlanicie, fnt);
+        }
+
+        if (estado_atual == ESTADO_LESTE_PLANICIE) {
+            renderizarBotao(ren, btnVoltarPlanicie, fnt);
+        }
+
+        // ========== RENDERIZAÇÃO DO CASTELO ==========
+        if (estado_atual == ESTADO_TERREO) {
             renderizarBotao(ren, btnPrimeiroAndar, fnt);
             renderizarBotao(ren, btnSegundoAndar, fnt);
             renderizarBotao(ren, btnSalaRei, fnt);
             renderizarBotao(ren, btnVoltarCastelo, fnt);
         }
 
-        // Castelo - Primeiro Andar
-        if(estado_atual == ESTADO_PRIMEIRO_ANDAR) {
+        if (estado_atual == ESTADO_PRIMEIRO_ANDAR) {
             renderizarBotao(ren, btnTerreo, fnt);
             renderizarBotao(ren, btnSegundoAndar, fnt);
             renderizarBotao(ren, btnSalaRei, fnt);
             renderizarBotao(ren, btnVoltarCastelo, fnt);
         }
 
-        // Castelo - Segundo Andar
-        if(estado_atual == ESTADO_SEGUNDO_ANDAR) {
+        if (estado_atual == ESTADO_SEGUNDO_ANDAR) {
             renderizarBotao(ren, btnTerreo, fnt);
             renderizarBotao(ren, btnPrimeiroAndar, fnt);
             renderizarBotao(ren, btnSalaRei, fnt);
             renderizarBotao(ren, btnVoltarCastelo, fnt);
         }
 
-        // Castelo - Sala do Rei
-        if(estado_atual == ESTADO_SALA_REI) {
+        if (estado_atual == ESTADO_SALA_REI) {
             renderizarBotao(ren, btnTerreo, fnt);
             renderizarBotao(ren, btnPrimeiroAndar, fnt);
             renderizarBotao(ren, btnSegundoAndar, fnt);
@@ -1439,24 +1686,25 @@ int main (int argc, char* args[])
         }
 
         // Arena
-        if(estado_atual == ESTADO_ARENA && em_batalha) {
+        if (estado_atual == ESTADO_ARENA && em_batalha) {
             renderizarBotao(ren, btnAtacar, fnt);
             renderizarBotao(ren, btnBolsa, fnt);
             renderizarBotao(ren, btnFugir, fnt);
         }
-        
-         // Rosa dos ventos
-        if(estado_atual == ESTADO_ROSA_DOS_VENTOS_PLANICIE || estado_atual == ESTADO_ROSA_DOS_VENTOS_PANTANO) {
+
+        // Rosa dos ventos
+        if (estado_atual == ESTADO_ROSA_DOS_VENTOS_PLANICIE ||
+            estado_atual == ESTADO_ROSA_DOS_VENTOS_PANTANO) {
             renderizarBotao(ren, btnOeste, fnt);
             renderizarBotao(ren, btnLeste, fnt);
             renderizarBotao(ren, btnNorte, fnt);
             renderizarBotao(ren, btnSul, fnt);
         }
-            
+
         SDL_RenderPresent(ren);
     }
 
-    // Liberar memória
+    // ========== LIMPEZA DE MEMÓRIA ==========
     liberarListaImagem(imagens_globais);
     freeTextList(textos_globais);
     TTF_CloseFont(fnt);
