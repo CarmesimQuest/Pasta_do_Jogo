@@ -148,7 +148,7 @@ CHC personagemCriacao;
 CHC personagemFinal;
 bool personagemCriado = false;
 
-// Variável global para efeitos de fade
+// Variável fade
 SDL_Texture* textura_fade = NULL;
 
 // ========== PROTÓTIPOS DE FUNÇÕES ==========
@@ -625,51 +625,51 @@ void inicializarInimigoComItem(INI* inimigo, const char* nome, int hp, int str, 
 
 //função Fade In e Fade Out
 void FadeInOut(SDL_Renderer *ren, SDL_Texture *txt, int intervalo){
-    Uint32 inicio = SDL_GetTicks();
-    Uint32 agora;
-    float carregamento;
-    int transparencia;
+    Uint32 inicioIn = SDL_GetTicks();
+    Uint32 agoraIn;
+    float carregamentoIn;
+    int transparenciaIn;
 
     SDL_SetTextureBlendMode(txt, SDL_BLENDMODE_BLEND);
     SDL_SetTextureAlphaMod(txt, 0);
 
     do {
-        agora = SDL_GetTicks();
-        carregamento = (float)(agora - inicio) / intervalo;
-        if (carregamento > 1.0f) carregamento = 1.0f;
+        agoraIn = SDL_GetTicks();
+        carregamentoIn = (float)(agoraIn - inicioIn) / intervalo;
+        if (carregamentoIn > 1.0f) carregamentoIn = 1.0f;
 
-        transparencia = (int)(255 * carregamento);
-        SDL_SetTextureAlphaMod(txt, transparencia);
+        transparenciaIn = (int)(255 * carregamentoIn);
+        SDL_SetTextureAlphaMod(txt, transparenciaIn);
 
         SDL_RenderClear(ren);
 
         SDL_RenderCopy(ren, txt, NULL, NULL);
         SDL_RenderPresent(ren);
 
-    } while (carregamento < 1.0f);
+    } while (carregamentoIn < 1.0f);
     
-    Uint32 inicio2 = SDL_GetTicks();
-    Uint32 agora2;
-    float carregamento2;
-    int transparencia2;
+    Uint32 inicioOut = SDL_GetTicks();
+    Uint32 agoraOut;
+    float carregamentoOut;
+    int transparenciaOut;
 
     SDL_SetTextureBlendMode(txt, SDL_BLENDMODE_BLEND);
     SDL_SetTextureAlphaMod(txt, 255);
 
     do {
-        agora2 = SDL_GetTicks();
-        carregamento2 = (float)(agora2 - inicio2) / intervalo;
-        if (carregamento2 > 1.0f) carregamento2 = 1.0f;
+        agoraOut = SDL_GetTicks();
+        carregamentoOut = (float)(agoraOut - inicioOut) / intervalo;
+        if (carregamentoOut > 1.0f) carregamentoOut = 1.0f;
 
-        transparencia2 = 255 - (int)(255 * carregamento2);
-        SDL_SetTextureAlphaMod(txt, transparencia2);
+        transparenciaOut = 255 - (int)(255 * carregamentoOut);
+        SDL_SetTextureAlphaMod(txt, transparenciaOut);
 
         SDL_RenderClear(ren);
 
         SDL_RenderCopy(ren, txt, NULL, NULL);
         SDL_RenderPresent(ren);
 
-    } while (carregamento2 < 1.0f);
+    } while (carregamentoOut < 1.0f);
 }
 
 // ========== FUNÇÕES DE CARREGAMENTO DE ESTADOS ==========
@@ -1905,6 +1905,7 @@ int main(int argc, char* args[]) {
                             em_batalha = false;
 
                             if (estado_atual == ESTADO_ARENA) {
+                            	FadeInOut(ren, textura_fade,500);
                                 mudarEstado(ESTADO_VILA);
                             }
                         }
@@ -1914,6 +1915,7 @@ int main(int argc, char* args[]) {
                             if (!personagemFinal.vivo) {
                                 adicionarMensagem("DERROTA! Voce foi morto!");
                                 adicionarMensagem("Fim de jogo...");
+                                FadeInOut(ren, textura_fade,500);
                                 em_batalha = false;
 
                                 stop = 1;
@@ -1936,9 +1938,11 @@ int main(int argc, char* args[]) {
                         em_batalha = false;
 
                         if (estado_atual == ESTADO_ARENA) {
+                       	    FadeInOut(ren, textura_fade,500);
                             mudarEstado(ESTADO_VILA);
                         }
                         else {
+                            FadeInOut(ren, textura_fade,500);
                             mudarEstado(estado_anterior);
                         }
                     }
