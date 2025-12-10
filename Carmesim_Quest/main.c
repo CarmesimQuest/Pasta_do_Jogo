@@ -46,14 +46,13 @@ typedef enum {
 
 // ========== ESTRUTURAS DE DADOS ==========
 typedef struct ITEM {
-
+    char nome[50];
+    char tipo[20];
     int atk;
-    int crit;
     int mag;
     int heal;
-    int gold;
-
-
+    int maestria;
+    bool equipado;
 } ITM;
 
 typedef struct character {
@@ -65,8 +64,10 @@ typedef struct character {
     int VIT;
     int pontosDisponiveis;
     bool vivo;
-    bool mao_esq;
-    bool mao_dir;
+    ITM* mao_esq;
+    ITM* mao_dir;
+    ITM* bolsa[10];
+    int bolsa_count;
 } CHC;
 
 typedef struct inimigo {
@@ -76,6 +77,7 @@ typedef struct inimigo {
     int INT;
     int DEX;
     bool vivo;
+    ITM* mao_dir;
 } INI;
 
 typedef struct TextTexture {
@@ -131,6 +133,10 @@ INI inimigo_atual;
 int turno_atual = 0;
 char buffer_mensagem[200];
 
+char mensagens_batalha[5][200];
+int mensagem_atual = 0;
+bool mostrar_caixa_texto = false;
+
 // Variáveis globais que serão inicializadas no main
 ListaImagens* imagens_globais;
 TextList* textos_globais;
@@ -163,21 +169,19 @@ void liberarListaImagem(ListaImagens* lista);
 
 // Lista de textos
 TextList* createTextList();
-void adicionartexto(TextList* list, SDL_Renderer* renderer, TTF_Font* font, const char* text,
-                   SDL_Color color, int x, int y, const char* nome);
+void adicionartexto(TextList* list, SDL_Renderer* renderer, TTF_Font* font, const char* text,SDL_Color color, int x, int y, const char* nome);
 TextNode* buscaTexto(TextList* list, const char* nome);
 void setTextVisibilidade(TextList* list, const char* nome, bool visible);
 void RenderizarTodosOsTextosVisiveis(TextList* list, SDL_Renderer* renderer);
 void esconderTodosOsTextos(TextList* list);
-void updateText(TextList* list, SDL_Renderer* renderer, TTF_Font* font,
-                const char* nome, const char* newText, SDL_Color color);
+void updateText(TextList* list, SDL_Renderer* renderer, TTF_Font* font,const char* nome, const char* newText, SDL_Color color);
 void freeTextList(TextList* list);
 
 // Sistema de batalha
 void inicializarInimigo(INI* inimigo, const char* nome, int hp, int str);
 void ataqueJogador(CHC* jogador, INI* inimigo);
 void ataqueInimigo(CHC* jogador, INI* inimigo);
-void iniciarBatalha(CHC* jogador);
+void iniciarBatalha(CHC* inimigo);
 
 // Funções de carregamento de estados
 void carregarMenu();
@@ -213,13 +217,15 @@ void carregarTelaCarregamento();
 void desativarEstadoAtual();
 void inicializarStatsCriacao();
 void carregarTelaItens();
+void adicionarMensagem();
+void renderizarCaixaTexto();
+void iniciarBatalha();
 
 // Sistema de mudança de estado
 void mudarEstado(EstadoJogo novo_estado);
 
 // Sistema de botões
-Botao criarBotao(int x, int y, int largura, int altura, const char* texto,
-                 SDL_Color fundo, SDL_Color borda, SDL_Color textoCor);
+Botao criarBotao(int x, int y, int largura, int altura, const char* texto, SDL_Color fundo, SDL_Color borda, SDL_Color textoCor);
 bool cliqueBotao(Botao btn, int mouseX, int mouseY);
 void renderizarBotao(SDL_Renderer* ren, Botao btn, TTF_Font* fonte);
 
@@ -444,6 +450,65 @@ void freeTextList(TextList* list) {
     free(list);
 }
 
+// ========== FUNÇÕES DO SISTEMA DE MENSAGENS ========
+
+void adicionarMensagem(const char* mensagem) {
+    for(int i = 4; i > 0; i--) {
+        strcpy(mensagens_batalha[i], mensagens_batalha[i - 1]);
+    }
+
+    strcpy(mensagens_batalha[0], mensagem);
+    mensagem_atual = 0;
+    mostrar_caixa_texto = true;
+}
+
+void renderizarCaixaTexto(SDL_Renderer* ren, TTF_Font* fnt) {
+    if(!mostrar_caixa_texto) return;
+
+    SDL_Rect caixa = {50, 20, 700, 150};
+
+    SDL_SetRenderDrawColor(ren, 0, 0, 0, 200);
+    SDL_RenderFillRect(ren, &caixa);
+
+    SDL_SetRenderDrawColor(ren, 184, 134, 11, 255);
+    SDL_RenderDrawRect(ren, &caixa);
+
+    int y = 30;
+    SDL_Color corBranca = {255, 255, 255, 255};
+
+    for (int i = 0; i < 5 && strlen(mensagens_batalha[i]) > 0; i++) {
+        TTR texto = CarregaTexto(ren, fnt, mensagens_batalha[i], corBranca);
+        renderTextAt(ren, texto, 60, y);
+        freeTextTexture(texto);
+        y += 25;
+    }
+}
+
+void iniciarBatalhaContra(INI* inimigo) {
+    if (inimigo == NULL) {
+        inicializarInimigo(&inimigo_atual, "Guerreiro da Arena", 40, 15);
+        inimigo_atual.DEX = 20;
+        inimigo_atual.INT = 5;
+    } else {
+        inimigo_atual = *inimigo;
+    }
+
+    inimigo_atual.vivo = true;
+    personagemFinal.vivo = true;
+
+    em_batalha = true;
+    turno_atual = 0;
+    mostrar_caixa_texto = true;
+
+    for (int i = 0; i < 5; i++) {
+        strcpy(mensagens_batalha[i], "");
+    }
+
+    char msg[200];
+    snprintf(msg, sizeof(msg), "Batalha iniciada contra %s!", inimigo_atual.nome);
+    adicionarMensagem(msg);
+}
+
 // ========== SISTEMA DE BATALHA ==========
 void inicializarInimigo(INI* inimigo, const char* nome, int hp, int str) {
     strcpy(inimigo->nome, nome);
@@ -453,44 +518,107 @@ void inicializarInimigo(INI* inimigo, const char* nome, int hp, int str) {
 }
 
 void ataqueJogador(CHC* jogador, INI* inimigo) {
-    int dano = jogador->STR + (rand() % 3);
-    inimigo->HP -= dano;
-    if (inimigo->HP < 0) inimigo->HP = 0;
+    int dano_total = 0;
+    int num_ataques = 1;
 
-    snprintf(buffer_mensagem, sizeof(buffer_mensagem),
-             "Voce atacou e causou %d de dano! %s HP: %d",
-             dano, inimigo->nome, inimigo->HP);
+    if (jogador->mao_dir) {
+        if (strcmp(jogador->mao_dir->tipo, "forca") == 0) {
+            int dano_base = jogador->mao_dir->atk + (jogador->STR * 40) / 100;
+            dano_total = dano_base;
+        }
+        else if (strcmp(jogador->mao_dir->tipo, "destreza") == 0) {
+            if (jogador->mao_dir->maestria > 0) {
+                num_ataques = jogador->DEX / jogador->mao_dir->maestria;
+            }
+            if (num_ataques < 1) num_ataques = 1;
+            if (num_ataques > 5) num_ataques = 5;
+
+            int dano_por_ataque = jogador->mao_dir->atk + (jogador->STR * 40) / 100;
+            if (dano_por_ataque < 1) dano_por_ataque = 1;
+
+            for (int i = 0; i < num_ataques; i++) {
+                dano_total += dano_por_ataque;
+            }
+        }
+        else if (strcmp(jogador->mao_dir->tipo, "magia") == 0) {
+            dano_total = jogador->mao_dir->mag + (jogador->INT * 60) / 100;
+        }
+    } else {
+        dano_total = (jogador->STR * 40) / 100;
+        if (dano_total < 1) dano_total = 1;
+    }
+
+    inimigo->HP -= dano_total;
+    if (inimigo->HP < 0) inimigo->HP = 0;
 
     if (inimigo->HP <= 0) {
         inimigo->vivo = false;
-        strcat(buffer_mensagem, " - INIMIGO DERROTADO");
     }
+
+    char msg[200];
+    snprintf(msg, sizeof(msg), "Voce atacou! Dano: %d (%d hits)", dano_total, num_ataques);
+    adicionarMensagem(msg);
+
+    snprintf(msg, sizeof(msg), "%s HP: %d", inimigo->nome, inimigo->HP);
+    adicionarMensagem(msg);
+
+    snprintf(msg, sizeof(msg), "Seu HP: %d/%d", jogador->HP, jogador->HP_MAX);
+    adicionarMensagem(msg);
 }
 
 void ataqueInimigo(CHC* jogador, INI* inimigo) {
-    int dano = inimigo->STR + (rand() % 3);
-    jogador->HP -= dano;
-    if (jogador->HP < 0) jogador->HP = 0;
+    int dano = 0;
 
-    snprintf(buffer_mensagem, sizeof(buffer_mensagem),
-             "%s atacou e causou %d de dano! Seu HP: %d",
-             inimigo->nome, dano, jogador->HP);
+    if (inimigo->mao_dir) {
+        if (strcmp(inimigo->mao_dir->tipo, "forca") == 0) {
+            dano = inimigo->mao_dir->atk + (inimigo->STR * 40) / 100;
+        }
+        else if (strcmp(inimigo->mao_dir->tipo, "destreza") == 0) {
+            int num_ataques = 1;
+            if (inimigo->mao_dir->maestria > 0) {
+                num_ataques = inimigo->DEX / inimigo->mao_dir->maestria;
+            }
+            if (num_ataques < 1) num_ataques = 1;
+
+            int dano_por_ataque = inimigo->mao_dir->atk + (inimigo->STR * 40) / 100;
+            if (dano_por_ataque < 1) dano_por_ataque = 1;
+
+            dano = dano_por_ataque * num_ataques;
+        }
+        else if (strcmp(inimigo->mao_dir->tipo, "magia") == 0) {
+            dano = inimigo->mao_dir->mag + (inimigo->INT * 60) / 100;
+        }
+    } else {
+        dano = (inimigo->STR * 40) / 100;
+    }
+
+    if (dano < 1) dano = 1;
+    jogador->HP -= dano;
 
     if (jogador->HP <= 0) {
         jogador->vivo = false;
-        strcat(buffer_mensagem, " - VOCE MORREU!");
     }
+
+    char msg[200];
+    snprintf(msg, sizeof(msg), "%s atacou! Dano: %d", inimigo->nome, dano);
+    adicionarMensagem(msg);
+
+    snprintf(msg, sizeof(msg), "Seu HP: %d/%d", jogador->HP, jogador->HP_MAX);
+    adicionarMensagem(msg);
+
+    snprintf(msg, sizeof(msg), "%s HP: %d", inimigo->nome, inimigo->HP);
+    adicionarMensagem(msg);
 }
 
-void iniciarBatalha(CHC* jogador) {
-
-
-    em_batalha = true;
-    turno_atual = 0;
-    inicializarInimigo(&inimigo_atual, "Guerreiro da Arena", 10, 2);
-    strcpy(buffer_mensagem, "Batalha iniciada! Escolha uma acao.");
+void inicializarInimigoComItem(INI* inimigo, const char* nome, int hp, int str, int dex, int intel, ITM* item) {
+    strcpy(inimigo->nome, nome);
+    inimigo->HP = hp;
+    inimigo->STR = str;
+    inimigo->DEX = dex;
+    inimigo->INT = intel;
+    inimigo->vivo = true;
+    inimigo->mao_dir = item;
 }
-
 
 // ========== FUNÇÕES DE CARREGAMENTO DE ESTADOS ==========
 void carregarMenu() {
@@ -528,8 +656,7 @@ void carregarMapa() {
     definirVisibilidadeImagem(imagens_globais, "Mapa", true);
 }
 
-void carregarTelaPersonagem(){
-
+void carregarTelaPersonagem() {
     esconderTodasImagens(imagens_globais);
     esconderTodosOsTextos(textos_globais);
 
@@ -554,16 +681,17 @@ void carregarTelaPersonagem(){
 
     printf("Tela de personagem carregada\n");
     printf("Pontos disponiveis: %d\n", personagemCriacao.pontosDisponiveis);
-
 }
 
-void carregarTelaItens(){
-
+void carregarTelaItens() {
     esconderTodasImagens(imagens_globais);
     esconderTodosOsTextos(textos_globais);
 
     definirVisibilidadeImagem(imagens_globais, "FundoSelecPers", true);
 
+    setTextVisibilidade(textos_globais, "arma1", true);
+    setTextVisibilidade(textos_globais, "arma2", true);
+    setTextVisibilidade(textos_globais, "arma3", true);
 }
 
 // FUNÇÕES RELACIONADAS AO PÂNTANO
@@ -809,6 +937,10 @@ void mudarEstado(EstadoJogo novo_estado) {
         case ESTADO_ROSA_DOS_VENTOS_PLANICIE: carregarRosaDosVentosPlanicie(); break;
         default: carregarMenu(); break;
     }
+
+    if (!em_batalha) {
+        mostrar_caixa_texto = false;
+    }
 }
 
 // ========== SISTEMA DE BOTÕES ==========
@@ -862,16 +994,16 @@ void inicializarStatsCriacao() {
     personagemCriacao.INT = 1;
     personagemCriacao.VIT = 1;
 
-    // 40 pontos totais - 4 já usados (1 em cada atributo) = 36 disponíveis
-    personagemCriacao.pontosDisponiveis = 36;
+    // 20 pontos totais - 4 já usados (1 em cada atributo) = 16 disponíveis
+    personagemCriacao.pontosDisponiveis = 16;
 
     // Calcular HP baseado na vitalidade
     personagemCriacao.HP_MAX = 10 + (personagemCriacao.VIT * 2);
     personagemCriacao.HP = personagemCriacao.HP_MAX;
 
     personagemCriacao.vivo = true;
-    personagemCriacao.mao_esq = false;
-    personagemCriacao.mao_dir = false;
+    personagemCriacao.mao_esq = NULL;
+    personagemCriacao.mao_dir = NULL;
 }
 
 void aumentarAtributo(int* atributo) {
@@ -940,12 +1072,106 @@ void atualizarTextoStats(SDL_Renderer* ren, TTF_Font* fnt) {
 }
 
 void limparMensagemErroPersonagem(SDL_Renderer* ren, TTF_Font* fnt) {
-
     SDL_Color branco = {255, 255, 255, 255};
     updateText(textos_globais, ren, fnt, "mensagem_batalha", " ", branco);
 }
 
+// ======== FUNÇÕES PARA ITENS ==========
+ITM* criarArma(const char* nome, const char* tipo, int atk, int mag, int maestria) {
+    ITM* arma = (ITM*)malloc(sizeof(ITM));
 
+    if(!arma) return NULL;
+
+    strcpy(arma -> nome, nome);
+    strcpy(arma -> tipo, tipo);
+    arma -> atk = atk;
+    arma -> mag = mag;
+    arma -> heal = 0;
+    arma -> maestria = maestria;
+
+    return arma;
+}
+
+ITM* criaConsumivel(const char* nome, int heal) {
+    ITM* consumivel = (ITM*)malloc(sizeof(ITM));
+    if(!consumivel) return NULL;
+
+    strcpy(consumivel -> nome, nome);
+    strcpy(consumivel->tipo, "consumivel");
+    consumivel->atk = 0;
+    consumivel->mag = 0;
+    consumivel->heal = heal;
+    consumivel->maestria = 0;
+
+    return consumivel;
+}
+
+void adicionarItemBolsa(CHC* jogador, ITM* item) {
+    if(jogador -> bolsa_count < 10) {
+        jogador -> bolsa[jogador -> bolsa_count] = item;
+        jogador -> bolsa_count++;
+        printf("Item adicionar à bolsa: %s\n", item -> nome);
+    }
+    else {
+        printf("BOLSA CHEIA");
+    }
+}
+
+void usarConsumivel(CHC* jogador, int indice) {
+    if(indice < 0 || indice >= jogador -> bolsa_count) {
+        printf("Índice inválido!\n");
+        return;
+    }
+
+    ITM* item = jogador -> bolsa[indice];
+
+    if(strcmp(item -> tipo, "consumivel") != 0) {
+        printf("Não é um item consumivel!\n");
+        return;
+    }
+
+    jogador -> HP += item -> heal;
+    if(jogador -> HP > jogador -> HP_MAX) {
+        jogador -> HP = jogador -> HP_MAX;
+    }
+
+    printf("Usou %s e curou %d HP! HP atual: %d/%d\n", item -> nome, item -> heal, jogador -> HP, jogador -> HP_MAX);
+
+    free(item);
+
+    for(int i = indice; i < jogador -> bolsa_count - 1; i++) {
+        jogador -> bolsa[i] = jogador -> bolsa[i + 1];
+    }
+    jogador -> bolsa_count--;
+}
+
+void mostrarBolsa(CHC* jogador) {
+    printf("\n=== BOLSA (%d/10) ===\n", jogador->bolsa_count);
+    for (int i = 0; i < jogador->bolsa_count; i++) {
+        ITM* item = jogador->bolsa[i];
+        printf("%d. %s", i, item->nome);
+
+        if (strcmp(item->tipo, "consumivel") == 0) {
+            printf(" (Consumível, Cura: %d)", item->heal);
+        } else {
+            printf(" (%s", item->tipo);
+            if (item->atk > 0) printf(", ATK: %d", item->atk);
+            if (item->mag > 0) printf(", MAG: %d", item->mag);
+            if (item->maestria > 0) printf(", Maestria: %d", item->maestria);
+            printf(")");
+        }
+        printf("\n");
+    }
+    printf("====================\n");
+}
+
+void equiparItem(CHC* jogador, ITM* item) {
+    if (jogador->mao_dir != NULL) {
+        free(jogador->mao_dir);
+    }
+    jogador->mao_dir = item;
+    printf("Item equipado: %s\n", item->nome);
+}
 
 // ========== FUNÇÃO PRINCIPAL ==========
 int main(int argc, char* args[]) {
@@ -963,10 +1189,8 @@ int main(int argc, char* args[]) {
 
     // Carregar fonte
     TTF_Font* fnt = TTF_OpenFont("minecraft_font.ttf", 15);
-    SDL_Color corTexto = {0, 0, 0, 255};
     SDL_Color ver = {255, 0, 0, 255};
     SDL_Color gold = {255, 215, 0, 255};
-    SDL_Color yel = {255, 255, 0, 255};
     SDL_Color branco = {255, 255, 255, 255};
 
     // Cores para botões
@@ -982,6 +1206,11 @@ int main(int argc, char* args[]) {
     // Inicializar listas globais
     imagens_globais = criarListaImagens();
     textos_globais = createTextList();
+
+    // Inicializar mensagens de batalha
+    for(int i = 0; i < 1; i++) {
+        strcpy(mensagens_batalha[i], "");
+    }
 
     // ========== DECLARAÇÃO DOS BOTÕES ==========
     // Botões do Menu Principal
@@ -1017,7 +1246,14 @@ int main(int argc, char* args[]) {
     Botao btnReset;
 
     // Botoes tela de itens
-    Botao btnJogar;
+    Botao btnJogar, btnClaymore, btnAdaga, btnCajado;
+
+    // Declarações do item
+    ITM* claymore;
+    ITM* adaga_prata;
+    ITM* cajado_carvalho;
+    ITM* pocao_curar;
+    ITM* espada_inimigo;
 
     // Adicionar TODAS as imagens
     adicionarImagem(imagens_globais, criarObjetoImagem("Castle.png", ren, 0, 0, 800, 600), "Menu_Principal");
@@ -1062,14 +1298,26 @@ int main(int argc, char* args[]) {
     // ADICIONAR TEXTOS PARA TELA DE PERSONAGEM
     adicionartexto(textos_globais, ren, fnt, "CRIACAO DE PERSONAGEM", gold, 250, 20, "titulo_criacao");
     adicionartexto(textos_globais, ren, fnt, "Distribua 40 pontos entre os atributos", branco, 200, 60, "instrucoes");
-    adicionartexto(textos_globais, ren, fnt, "Pontos Disponiveis: 36", ver, 300, 100, "pontos_disponiveis");
+    adicionartexto(textos_globais, ren, fnt, "Pontos Disponiveis: 6", ver, 300, 100, "pontos_disponiveis");
     adicionartexto(textos_globais, ren, fnt, "FORCA: 1", branco, 100, 150, "stat_forca");
     adicionartexto(textos_globais, ren, fnt, "DESTREZA: 1", branco, 100, 200, "stat_destreza");
     adicionartexto(textos_globais, ren, fnt, "INTELIGENCIA: 1", branco, 100, 250, "stat_inteligencia");
     adicionartexto(textos_globais, ren, fnt, "VITALIDADE: 1", branco, 100, 300, "stat_vitalidade");
     adicionartexto(textos_globais, ren, fnt, "HP FINAL: 12", ver, 100, 350, "hp_final");
 
+    //TEXTO DOS ITENS
+    adicionartexto(textos_globais, ren, fnt, "Claymore: ATK + 40% STR", branco, 200, 100, "arma1");
+    adicionartexto(textos_globais, ren, fnt, "Adaga: ATK + 40% STR, (DEX/15) hits", branco, 200, 150, "arma2");
+    adicionartexto(textos_globais, ren, fnt, "Cajado: MAG + 60% INT", branco, 200, 200, "arma3");
+
+    // ========== INICIALIZAR ITENS =========
+    espada_inimigo = criarArma("Espada de ferro", "força", 8, 0, 0);
+
+    // iniciando armas dos inimigos
+    inicializarInimigoComItem(&inimigo_atual, "Guerreiro da Arena", 40, 15, 20, 5, espada_inimigo);
+
     // ========== INICIALIZAR TODOS OS BOTÕES ==========
+
     // Menu Principal
     btnIniciar = criarBotao(200, 500, 190, 40, "INICIAR", corAzul, corBorda, corTextoBtn);
     btnSair = criarBotao(500, 500, 100, 40, "SAIR", corVermelho, corBorda, corTextoBtn);
@@ -1131,6 +1379,9 @@ int main(int argc, char* args[]) {
 
     // Botões da tela de Itens:
     btnJogar = criarBotao(400, 500, 150, 40, "JOGAR", corAzul, corBorda, corTextoBtn);
+    btnClaymore = criarBotao(200, 80, 400, 40, "Claymore: ATK + 40% STR", corVerde, corBorda, corTextoBtn);
+    btnAdaga = criarBotao(200, 130, 400, 40, "Adaga: ATK + 40% STR, (DEX/15) hits", corVerde, corBorda, corTextoBtn);
+    btnCajado = criarBotao(200, 180, 400, 40, "Cajado: MAG + 60% INT", corVerde, corBorda, corTextoBtn);
 
     // Inicializar stats de criação
     inicializarStatsCriacao();
@@ -1160,7 +1411,7 @@ int main(int argc, char* args[]) {
                 stop++;
             }
 
-            if(evt.type == SDL_KEYDOWN && evt.key.keysym.sym == SDLK_BACKSPACE){
+            if(evt.type == SDL_KEYDOWN && evt.key.keysym.sym == SDLK_BACKSPACE) {
                 mudarEstado(ESTADO_MENU_PRINCIPAL);
             }
 
@@ -1183,14 +1434,14 @@ int main(int argc, char* args[]) {
                 }
 
                 // Tela de Personagens
-                if(estado_atual == ESTADO_TELA_PERSONAGEM){
-                    if(cliqueBotao(btnAvancar, mouseX, mouseY)){
+                if(estado_atual == ESTADO_TELA_PERSONAGEM) {
+                    if(cliqueBotao(btnAvancar, mouseX, mouseY)) {
                         if (personagemCriacao.pontosDisponiveis == 0) {
                             finalizarPersonagem();
                             mudarEstado(ESTADO_TELA_ITENS);
                         } else {
-                        // Atualizar mensagem de erro
-                        updateText(textos_globais, ren, fnt, "mensagem_batalha", "Distribua todos os pontos primeiro!", ver);
+                            // Atualizar mensagem de erro
+                            updateText(textos_globais, ren, fnt, "mensagem_batalha", "Distribua todos os pontos primeiro!", ver);
                         }
                     }
 
@@ -1251,9 +1502,33 @@ int main(int argc, char* args[]) {
                 }
 
                 // tela de itens
-                if(estado_atual == ESTADO_TELA_ITENS){
-                    if(cliqueBotao(btnJogar, mouseX, mouseY)){
+                if(estado_atual == ESTADO_TELA_ITENS) {
+                    if(cliqueBotao(btnJogar, mouseX, mouseY)) {
                         mudarEstado(ESTADO_VILA);
+                    }
+
+                    if (cliqueBotao(btnClaymore, mouseX, mouseY)) {
+                        claymore = criarArma("Claymore", "forca", 12, 0, 0);
+                        equiparItem(&personagemFinal, claymore);
+
+                        pocao_curar = criaConsumivel("Poção de Cura", 30);
+                        adicionarItemBolsa(&personagemFinal, pocao_curar);
+                    }
+
+                    if (cliqueBotao(btnAdaga, mouseX, mouseY)) {
+                        adaga_prata = criarArma("Adaga de Prata", "destreza", 5, 0, 15);
+                        equiparItem(&personagemFinal, adaga_prata);
+
+                        pocao_curar = criaConsumivel("Poção de Cura", 30);
+                        adicionarItemBolsa(&personagemFinal, pocao_curar);
+                    }
+
+                    if (cliqueBotao(btnCajado, mouseX, mouseY)) {
+                        cajado_carvalho = criarArma("Cajado de Carvalho", "magia", 0, 10, 0);
+                        equiparItem(&personagemFinal, cajado_carvalho);
+
+                        pocao_curar = criaConsumivel("Poção de Cura", 30);
+                        adicionarItemBolsa(&personagemFinal, pocao_curar);
                     }
                 }
 
@@ -1261,7 +1536,7 @@ int main(int argc, char* args[]) {
                 if (estado_atual == ESTADO_VILA) {
                     if (cliqueBotao(btnArena, mouseX, mouseY)) {
                         mudarEstado(ESTADO_ARENA);
-                        iniciarBatalha(&personagemFinal);
+                        iniciarBatalhaContra(NULL);
                     }
                     if (cliqueBotao(btnMapa, mouseX, mouseY)) {
                         mudarEstado(ESTADO_MAPA);
@@ -1507,40 +1782,50 @@ int main(int argc, char* args[]) {
                 // ========== BATALHA NA ARENA ==========
                 if (estado_atual == ESTADO_ARENA && em_batalha) {
                     if (cliqueBotao(btnAtacar, mouseX, mouseY)) {
-                        turno_atual++;
-                        if (turno_atual % 2 == 1) {
-                            ataqueJogador(&personagemFinal, &inimigo_atual);
-                        } else {
-                            ataqueInimigo(&personagemFinal, &inimigo_atual);
-                        }
-                        updateText(textos_globais, ren, fnt, "mensagem_batalha", buffer_mensagem, branco);
+                        ataqueJogador(&personagemFinal, &inimigo_atual);
 
-                        if (inimigo_atual.vivo && personagemFinal.vivo) {
-                            ataqueInimigo(&personagemFinal, &inimigo_atual);
-                            updateText(textos_globais, ren, fnt, "mensagem_batalha", buffer_mensagem, branco);
-                        }
+                        if (!inimigo_atual.vivo) {
+                            adicionarMensagem("VITORIA! Inimigo derrotado!");
+                            adicionarMensagem("Voce ganhou a batalha!");
+                            em_batalha = false;
 
-                        if (!inimigo_atual.vivo || !personagemFinal.vivo) {
-                            if (!inimigo_atual.vivo) {
-                                strcpy(buffer_mensagem, "Vitoria! Inimigo derrotado!");
-                                em_batalha = false;
+                            if (estado_atual == ESTADO_ARENA) {
                                 mudarEstado(ESTADO_VILA);
-                            } else {
-                                strcpy(buffer_mensagem, "Derrota! Voce foi morto!");
-                                stop++;
                             }
-                            updateText(textos_globais, ren, fnt, "mensagem_batalha", buffer_mensagem, branco);
+                        }
+                        else if (personagemFinal.vivo) {
+                            ataqueInimigo(&personagemFinal, &inimigo_atual);
+
+                            if (!personagemFinal.vivo) {
+                                adicionarMensagem("DERROTA! Voce foi morto!");
+                                adicionarMensagem("Fim de jogo...");
+                                em_batalha = false;
+
+                                stop = 1;
+                            }
                         }
                     }
+
                     if (cliqueBotao(btnBolsa, mouseX, mouseY)) {
-                        strcpy(buffer_mensagem, "Bolsa Vazia!");
-                        updateText(textos_globais, ren, fnt, "mensagem_batalha", buffer_mensagem, branco);
+                        if (personagemFinal.bolsa_count > 0) {
+                            usarConsumivel(&personagemFinal, 0);
+                            adicionarMensagem("Usou pocao de cura!");
+                        }
+                        else {
+                            adicionarMensagem("Bolsa vazia!");
+                        }
                     }
+
                     if (cliqueBotao(btnFugir, mouseX, mouseY)) {
-                        strcpy(buffer_mensagem, "Voce fugiu da batalha!");
-                        updateText(textos_globais, ren, fnt, "mensagem_batalha", buffer_mensagem, branco);
+                        adicionarMensagem("Voce fugiu da batalha!");
                         em_batalha = false;
-                        mudarEstado(ESTADO_VILA);
+
+                        if (estado_atual == ESTADO_ARENA) {
+                            mudarEstado(ESTADO_VILA);
+                        }
+                        else {
+                            mudarEstado(estado_anterior);
+                        }
                     }
                 }
             }
@@ -1565,6 +1850,11 @@ int main(int argc, char* args[]) {
         renderizarImagensVisiveis(imagens_globais, ren);
         RenderizarTodosOsTextosVisiveis(textos_globais, ren);
 
+        // Renderizar caixa de texto se estiver em batalha
+        if (mostrar_caixa_texto) {
+            renderizarCaixaTexto(ren, fnt);
+        }
+
         // ========== RENDERIZAR BOTÕES POR ESTADO ==========
         // Menu Principal
         if (estado_atual == ESTADO_MENU_PRINCIPAL) {
@@ -1573,7 +1863,7 @@ int main(int argc, char* args[]) {
         }
 
         // Tela de Personagem
-        if(estado_atual == ESTADO_TELA_PERSONAGEM){
+        if(estado_atual == ESTADO_TELA_PERSONAGEM) {
             renderizarBotao(ren, btnAvancar, fnt);
             renderizarBotao(ren, btnAddForca, fnt);
             renderizarBotao(ren, btnSubForca, fnt);
@@ -1587,8 +1877,11 @@ int main(int argc, char* args[]) {
         }
 
         // Tela de Itens
-        if(estado_atual == ESTADO_TELA_ITENS){
+        if(estado_atual == ESTADO_TELA_ITENS) {
             renderizarBotao(ren, btnJogar, fnt);
+            renderizarBotao(ren, btnClaymore, fnt);
+            renderizarBotao(ren, btnAdaga, fnt);
+            renderizarBotao(ren, btnCajado, fnt);
         }
 
         // Vila
@@ -1705,6 +1998,22 @@ int main(int argc, char* args[]) {
     }
 
     // ========== LIMPEZA DE MEMÓRIA ==========
+    //Liberar itens do jogador
+    if(personagemFinal.mao_dir) {
+        free(personagemFinal.mao_dir);
+    }
+
+    for(int i = 0; i < personagemFinal.bolsa_count; i++) {
+        if(personagemFinal.bolsa[i]) {
+            free(personagemFinal.bolsa[i]);
+        }
+    }
+
+    // Liberar itens dos inimigos
+    if(inimigo_atual.mao_dir) {
+        free(inimigo_atual.mao_dir);
+    }
+
     liberarListaImagem(imagens_globais);
     freeTextList(textos_globais);
     TTF_CloseFont(fnt);
