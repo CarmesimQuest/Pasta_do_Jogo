@@ -148,6 +148,9 @@ CHC personagemCriacao;
 CHC personagemFinal;
 bool personagemCriado = false;
 
+// Variável global para efeitos de fade
+SDL_Texture* textura_fade = NULL;
+
 // ========== PROTÓTIPOS DE FUNÇÕES ==========
 // Funções de texto
 TTR CarregaTexto(SDL_Renderer* renderer, TTF_Font* font, const char* text, SDL_Color color);
@@ -620,6 +623,55 @@ void inicializarInimigoComItem(INI* inimigo, const char* nome, int hp, int str, 
     inimigo->mao_dir = item;
 }
 
+//função Fade In e Fade Out
+void FadeInOut(SDL_Renderer *ren, SDL_Texture *txt, int intervalo){
+    Uint32 inicio = SDL_GetTicks();
+    Uint32 agora;
+    float carregamento;
+    int transparencia;
+
+    SDL_SetTextureBlendMode(txt, SDL_BLENDMODE_BLEND);
+    SDL_SetTextureAlphaMod(txt, 0);
+
+    do {
+        agora = SDL_GetTicks();
+        carregamento = (float)(agora - inicio) / intervalo;
+        if (carregamento > 1.0f) carregamento = 1.0f;
+
+        transparencia = (int)(255 * carregamento);
+        SDL_SetTextureAlphaMod(txt, transparencia);
+
+        SDL_RenderClear(ren);
+
+        SDL_RenderCopy(ren, txt, NULL, NULL);
+        SDL_RenderPresent(ren);
+
+    } while (carregamento < 1.0f);
+    
+    Uint32 inicio2 = SDL_GetTicks();
+    Uint32 agora2;
+    float carregamento2;
+    int transparencia2;
+
+    SDL_SetTextureBlendMode(txt, SDL_BLENDMODE_BLEND);
+    SDL_SetTextureAlphaMod(txt, 255);
+
+    do {
+        agora2 = SDL_GetTicks();
+        carregamento2 = (float)(agora2 - inicio2) / intervalo;
+        if (carregamento2 > 1.0f) carregamento2 = 1.0f;
+
+        transparencia2 = 255 - (int)(255 * carregamento2);
+        SDL_SetTextureAlphaMod(txt, transparencia2);
+
+        SDL_RenderClear(ren);
+
+        SDL_RenderCopy(ren, txt, NULL, NULL);
+        SDL_RenderPresent(ren);
+
+    } while (carregamento2 < 1.0f);
+}
+
 // ========== FUNÇÕES DE CARREGAMENTO DE ESTADOS ==========
 void carregarMenu() {
     esconderTodasImagens(imagens_globais);
@@ -902,7 +954,7 @@ void mudarEstado(EstadoJogo novo_estado) {
     desativarEstadoAtual();
     estado_anterior = estado_atual;
     estado_atual = novo_estado;
-
+	
     switch(novo_estado) {
         case ESTADO_MENU_PRINCIPAL: carregarMenu(); break;
         case ESTADO_TELA_CARREGAMENTO: carregarTelaCarregamento(); break;
@@ -1187,6 +1239,13 @@ int main(int argc, char* args[]) {
 
     SDL_Renderer* ren = SDL_CreateRenderer(win, -1, SDL_RENDERER_ACCELERATED);
 
+    // Criar textura para efeitos de fade (tela preta)
+    textura_fade = SDL_CreateTexture(ren, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_TARGET, 800, 600);
+    SDL_SetRenderTarget(ren, textura_fade);
+    SDL_SetRenderDrawColor(ren, 0, 0, 0, 255);
+    SDL_RenderClear(ren);
+    SDL_SetRenderTarget(ren, NULL);
+
     // Carregar fonte
     TTF_Font* fnt = TTF_OpenFont("minecraft_font.ttf", 15);
     SDL_Color ver = {255, 0, 0, 255};
@@ -1378,7 +1437,7 @@ int main(int argc, char* args[]) {
     btnReset = criarBotao(400, 500, 100, 40, "RESET", corVermelho, corBorda, corTextoBtn);
 
     // Botões da tela de Itens:
-    btnJogar = criarBotao(400, 500, 150, 40, "JOGAR", corAzul, corBorda, corTextoBtn);
+    btnJogar = criarBotao(325, 400, 150, 40, "JOGAR", corAzul, corBorda, corTextoBtn);
     btnClaymore = criarBotao(200, 80, 400, 40, "Claymore: ATK + 40% STR", corVerde, corBorda, corTextoBtn);
     btnAdaga = criarBotao(200, 130, 400, 40, "Adaga: ATK + 40% STR, (DEX/15) hits", corVerde, corBorda, corTextoBtn);
     btnCajado = criarBotao(200, 180, 400, 40, "Cajado: MAG + 60% INT", corVerde, corBorda, corTextoBtn);
@@ -1505,6 +1564,7 @@ int main(int argc, char* args[]) {
                 if(estado_atual == ESTADO_TELA_ITENS) {
                     if(cliqueBotao(btnJogar, mouseX, mouseY)) {
                         mudarEstado(ESTADO_VILA);
+                        FadeInOut(ren, textura_fade,1000);
                     }
 
                     if (cliqueBotao(btnClaymore, mouseX, mouseY)) {
@@ -1535,10 +1595,12 @@ int main(int argc, char* args[]) {
                 // Vila
                 if (estado_atual == ESTADO_VILA) {
                     if (cliqueBotao(btnArena, mouseX, mouseY)) {
+                    	FadeInOut(ren, textura_fade,500);
                         mudarEstado(ESTADO_ARENA);
                         iniciarBatalhaContra(NULL);
                     }
                     if (cliqueBotao(btnMapa, mouseX, mouseY)) {
+                    	FadeInOut(ren, textura_fade,500);
                         mudarEstado(ESTADO_MAPA);
                     }
                 }
@@ -1546,15 +1608,19 @@ int main(int argc, char* args[]) {
                 // Mapa
                 if (estado_atual == ESTADO_MAPA) {
                     if (cliqueBotao(btnPantano, mouseX, mouseY)) {
+                    	FadeInOut(ren, textura_fade,500);
                         mudarEstado(ESTADO_PANTANO);
                     }
                     if (cliqueBotao(btnPlanicie, mouseX, mouseY)) {
+                    	FadeInOut(ren, textura_fade,500);
                         mudarEstado(ESTADO_PLANICIE);
                     }
                     if (cliqueBotao(btnCastelo, mouseX, mouseY)) {
+                    	FadeInOut(ren, textura_fade,500);
                         mudarEstado(ESTADO_TERREO);
                     }
                     if (cliqueBotao(btnVoltarMapa, mouseX, mouseY)) {
+                    	FadeInOut(ren, textura_fade,500);
                         mudarEstado(ESTADO_VILA);
                     }
                 }
@@ -1562,66 +1628,79 @@ int main(int argc, char* args[]) {
                 // ========== EVENTOS DO PÂNTANO ==========
                 if (estado_atual == ESTADO_PANTANO) {
                     if (cliqueBotao(btnRegioesPantano, mouseX, mouseY)) {
+                    	FadeInOut(ren, textura_fade,500);
                         mudarEstado(ESTADO_ROSA_DOS_VENTOS_PANTANO);
                     }
                     if (cliqueBotao(btnVoltarPantano, mouseX, mouseY)) {
+                    	FadeInOut(ren, textura_fade,500);
                         mudarEstado(ESTADO_MAPA);
                     }
                 }
 
                 if (estado_atual == ESTADO_OESTE_PANTANO) {
                     if (cliqueBotao(btnVoltarPantano, mouseX, mouseY)) {
+                    	FadeInOut(ren, textura_fade,500);
                         mudarEstado(ESTADO_PANTANO);
                     }
                 }
 
                 if (estado_atual == ESTADO_NORTE_PANTANO) {
                     if (cliqueBotao(btnEntrarPantano, mouseX, mouseY)) {
+                    	FadeInOut(ren, textura_fade,500);
                         mudarEstado(ESTADO_BOSS_NORTE_PANTANO);
                     }
                     if (cliqueBotao(btnVoltarPantano, mouseX, mouseY)) {
+                    	FadeInOut(ren, textura_fade,500);
                         mudarEstado(ESTADO_PANTANO);
                     }
                 }
 
                 if (estado_atual == ESTADO_SUL_PANTANO) {
                     if (cliqueBotao(btnEntrarPantano, mouseX, mouseY)) {
+                    	FadeInOut(ren, textura_fade,500);
                         mudarEstado(ESTADO_BOSS_SUL_PANTANO);
                     }
                     if (cliqueBotao(btnVoltarPantano, mouseX, mouseY)) {
+                    	FadeInOut(ren, textura_fade,500);
                         mudarEstado(ESTADO_PANTANO);
                     }
                 }
 
                 if (estado_atual == ESTADO_OESTE_PANTANO) {
                     if (cliqueBotao(btnEntrarPantano, mouseX, mouseY)) {
+                    	FadeInOut(ren, textura_fade,500);
                         mudarEstado(ESTADO_BOSS_OESTE_PANTANO);
                     }
                     if (cliqueBotao(btnVoltarPantano, mouseX, mouseY)) {
+                    	FadeInOut(ren, textura_fade,500);
                         mudarEstado(ESTADO_PANTANO);
                     }
                 }
 
                 if (estado_atual == ESTADO_BOSS_NORTE_PANTANO) {
                     if (cliqueBotao(btnVoltarPantano, mouseX, mouseY)) {
+                    	FadeInOut(ren, textura_fade,500);
                         mudarEstado(ESTADO_NORTE_PANTANO);
                     }
                 }
 
                 if (estado_atual == ESTADO_BOSS_SUL_PANTANO) {
                     if (cliqueBotao(btnVoltarPantano, mouseX, mouseY)) {
+                    	FadeInOut(ren, textura_fade,500);
                         mudarEstado(ESTADO_SUL_PANTANO);
                     }
                 }
 
                 if (estado_atual == ESTADO_BOSS_OESTE_PANTANO) {
                     if (cliqueBotao(btnVoltarPantano, mouseX, mouseY)) {
+                    	FadeInOut(ren, textura_fade,500);
                         mudarEstado(ESTADO_OESTE_PANTANO);
                     }
                 }
 
                 if (estado_atual == ESTADO_LESTE_PANTANO) {
                     if (cliqueBotao(btnVoltarPantano, mouseX, mouseY)) {
+                    	FadeInOut(ren, textura_fade,500);
                         mudarEstado(ESTADO_PANTANO);
                     }
                 }
@@ -1629,60 +1708,72 @@ int main(int argc, char* args[]) {
                 // ========== EVENTOS DA PLANÍCIE ==========
                 if (estado_atual == ESTADO_PLANICIE) {
                     if (cliqueBotao(btnRegioesPlanicie, mouseX, mouseY)) {
+                    	FadeInOut(ren, textura_fade,500);
                         mudarEstado(ESTADO_ROSA_DOS_VENTOS_PLANICIE);
                     }
                     if (cliqueBotao(btnVoltarPlanicie, mouseX, mouseY)) {
+                    	FadeInOut(ren, textura_fade,500);
                         mudarEstado(ESTADO_MAPA);
                     }
                 }
 
                 if (estado_atual == ESTADO_NORTE_PLANICIE) {
                     if (cliqueBotao(btnEntrarPlanicie, mouseX, mouseY)) {
+                    	FadeInOut(ren, textura_fade,500);
                         mudarEstado(ESTADO_BOSS_NORTE_PLANICIE);
                     }
                     if (cliqueBotao(btnVoltarPlanicie, mouseX, mouseY)) {
+                    	FadeInOut(ren, textura_fade,500);
                         mudarEstado(ESTADO_PLANICIE);
                     }
                 }
 
                 if (estado_atual == ESTADO_SUL_PLANICIE) {
                     if (cliqueBotao(btnEntrarPlanicie, mouseX, mouseY)) {
+                    	FadeInOut(ren, textura_fade,500);
                         mudarEstado(ESTADO_BOSS_SUL_PLANICIE);
                     }
                     if (cliqueBotao(btnVoltarPlanicie, mouseX, mouseY)) {
+                    	FadeInOut(ren, textura_fade,500);
                         mudarEstado(ESTADO_PLANICIE);
                     }
                 }
 
                 if (estado_atual == ESTADO_OESTE_PLANICIE) {
                     if (cliqueBotao(btnEntrarPlanicie, mouseX, mouseY)) {
+                    	FadeInOut(ren, textura_fade,500);
                         mudarEstado(ESTADO_BOSS_OESTE_PLANICIE);
                     }
                     if (cliqueBotao(btnVoltarPlanicie, mouseX, mouseY)) {
+                    	FadeInOut(ren, textura_fade,500);
                         mudarEstado(ESTADO_PLANICIE);
                     }
                 }
 
                 if (estado_atual == ESTADO_BOSS_NORTE_PLANICIE) {
                     if (cliqueBotao(btnVoltarPlanicie, mouseX, mouseY)) {
+                    	FadeInOut(ren, textura_fade,500);
                         mudarEstado(ESTADO_NORTE_PLANICIE);
                     }
                 }
 
                 if (estado_atual == ESTADO_BOSS_SUL_PLANICIE) {
                     if (cliqueBotao(btnVoltarPlanicie, mouseX, mouseY)) {
+                    	FadeInOut(ren, textura_fade,500);
                         mudarEstado(ESTADO_SUL_PLANICIE);
                     }
                 }
 
                 if (estado_atual == ESTADO_BOSS_OESTE_PLANICIE) {
                     if (cliqueBotao(btnVoltarPlanicie, mouseX, mouseY)) {
+                    	FadeInOut(ren, textura_fade,500);
                         mudarEstado(ESTADO_OESTE_PLANICIE);
                     }
                 }
 
                 if (estado_atual == ESTADO_LESTE_PLANICIE) {
                     if (cliqueBotao(btnVoltarPlanicie, mouseX, mouseY)) {
+                    	FadeInOut(ren, textura_fade,500);
                         mudarEstado(ESTADO_PLANICIE);
                     }
                 }
@@ -1690,60 +1781,76 @@ int main(int argc, char* args[]) {
                 // ========== EVENTOS DO CASTELO ==========
                 if (estado_atual == ESTADO_TERREO) {
                     if (cliqueBotao(btnPrimeiroAndar, mouseX, mouseY)) {
+                    	FadeInOut(ren, textura_fade,500);
                         mudarEstado(ESTADO_PRIMEIRO_ANDAR);
                     }
                     if (cliqueBotao(btnSegundoAndar, mouseX, mouseY)) {
+                    	FadeInOut(ren, textura_fade,500);
                         mudarEstado(ESTADO_SEGUNDO_ANDAR);
                     }
                     if (cliqueBotao(btnSalaRei, mouseX, mouseY)) {
+                    	FadeInOut(ren, textura_fade,500);
                         mudarEstado(ESTADO_SALA_REI);
                     }
                     if (cliqueBotao(btnVoltarCastelo, mouseX, mouseY)) {
+                    	FadeInOut(ren, textura_fade,500);
                         mudarEstado(ESTADO_MAPA);
                     }
                 }
 
                 if (estado_atual == ESTADO_PRIMEIRO_ANDAR) {
                     if (cliqueBotao(btnTerreo, mouseX, mouseY)) {
+                    	FadeInOut(ren, textura_fade,500);
                         mudarEstado(ESTADO_TERREO);
                     }
                     if (cliqueBotao(btnSegundoAndar, mouseX, mouseY)) {
+                    	FadeInOut(ren, textura_fade,500);
                         mudarEstado(ESTADO_SEGUNDO_ANDAR);
                     }
                     if (cliqueBotao(btnSalaRei, mouseX, mouseY)) {
+                    	FadeInOut(ren, textura_fade,500);
                         mudarEstado(ESTADO_SALA_REI);
                     }
                     if (cliqueBotao(btnVoltarCastelo, mouseX, mouseY)) {
+                    	FadeInOut(ren, textura_fade,500);
                         mudarEstado(ESTADO_MAPA);
                     }
                 }
 
                 if (estado_atual == ESTADO_SEGUNDO_ANDAR) {
                     if (cliqueBotao(btnTerreo, mouseX, mouseY)) {
+                    	FadeInOut(ren, textura_fade,500);
                         mudarEstado(ESTADO_TERREO);
                     }
                     if (cliqueBotao(btnPrimeiroAndar, mouseX, mouseY)) {
+                    	FadeInOut(ren, textura_fade,500);
                         mudarEstado(ESTADO_PRIMEIRO_ANDAR);
                     }
                     if (cliqueBotao(btnSalaRei, mouseX, mouseY)) {
+                    	FadeInOut(ren, textura_fade,500);
                         mudarEstado(ESTADO_SALA_REI);
                     }
                     if (cliqueBotao(btnVoltarCastelo, mouseX, mouseY)) {
+                    	FadeInOut(ren, textura_fade,500);
                         mudarEstado(ESTADO_MAPA);
                     }
                 }
 
                 if (estado_atual == ESTADO_SALA_REI) {
                     if (cliqueBotao(btnTerreo, mouseX, mouseY)) {
+                    	FadeInOut(ren, textura_fade,500);
                         mudarEstado(ESTADO_TERREO);
                     }
                     if (cliqueBotao(btnPrimeiroAndar, mouseX, mouseY)) {
+                    	FadeInOut(ren, textura_fade,500);
                         mudarEstado(ESTADO_PRIMEIRO_ANDAR);
                     }
                     if (cliqueBotao(btnSegundoAndar, mouseX, mouseY)) {
+                    	FadeInOut(ren, textura_fade,500);
                         mudarEstado(ESTADO_SEGUNDO_ANDAR);
                     }
                     if (cliqueBotao(btnVoltarCastelo, mouseX, mouseY)) {
+                    	FadeInOut(ren, textura_fade,500);
                         mudarEstado(ESTADO_MAPA);
                     }
                 }
@@ -1751,30 +1858,38 @@ int main(int argc, char* args[]) {
                 // ========== ROSA DOS VENTOS ==========
                 if (estado_atual == ESTADO_ROSA_DOS_VENTOS_PANTANO) {
                     if (cliqueBotao(btnOeste, mouseX, mouseY)) {
+                    	FadeInOut(ren, textura_fade,500);
                         mudarEstado(ESTADO_OESTE_PANTANO);
                     }
                     if (cliqueBotao(btnLeste, mouseX, mouseY)) {
+                    	FadeInOut(ren, textura_fade,500);
                         mudarEstado(ESTADO_LESTE_PANTANO);
                     }
                     if (cliqueBotao(btnNorte, mouseX, mouseY)) {
+                    	FadeInOut(ren, textura_fade,500);
                         mudarEstado(ESTADO_NORTE_PANTANO);
                     }
                     if (cliqueBotao(btnSul, mouseX, mouseY)) {
+                    	FadeInOut(ren, textura_fade,500);
                         mudarEstado(ESTADO_SUL_PANTANO);
                     }
                 }
 
                 if (estado_atual == ESTADO_ROSA_DOS_VENTOS_PLANICIE) {
                     if (cliqueBotao(btnOeste, mouseX, mouseY)) {
+                    	FadeInOut(ren, textura_fade,500);
                         mudarEstado(ESTADO_OESTE_PLANICIE);
                     }
                     if (cliqueBotao(btnLeste, mouseX, mouseY)) {
+                    	FadeInOut(ren, textura_fade,500);
                         mudarEstado(ESTADO_LESTE_PLANICIE);
                     }
                     if (cliqueBotao(btnNorte, mouseX, mouseY)) {
+                    	FadeInOut(ren, textura_fade,500);
                         mudarEstado(ESTADO_NORTE_PLANICIE);
                     }
                     if (cliqueBotao(btnSul, mouseX, mouseY)) {
+                    	FadeInOut(ren, textura_fade,500);
                         mudarEstado(ESTADO_SUL_PLANICIE);
                     }
                 }
@@ -2025,3 +2140,4 @@ int main(int argc, char* args[]) {
 
     return 0;
 }
+
