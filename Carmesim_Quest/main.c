@@ -625,43 +625,20 @@ void inicializarInimigoComItem(INI* inimigo, const char* nome, int hp, int str, 
 
 //função Fade In e Fade Out
 void FadeInOut(SDL_Renderer *ren, SDL_Texture *txt, int intervalo){
-    Uint32 inicioIn = SDL_GetTicks();
-    Uint32 agoraIn;
-    float carregamentoIn;
-    int transparenciaIn;
-
-    SDL_SetTextureBlendMode(txt, SDL_BLENDMODE_BLEND);
-    SDL_SetTextureAlphaMod(txt, 0);
-
-    do {
-        agoraIn = SDL_GetTicks();
-        carregamentoIn = (float)(agoraIn - inicioIn) / intervalo;
-        if (carregamentoIn > 1.0f) carregamentoIn = 1.0f;
-
-        transparenciaIn = (int)(255 * carregamentoIn);
-        SDL_SetTextureAlphaMod(txt, transparenciaIn);
-
-        SDL_RenderClear(ren);
-
-        SDL_RenderCopy(ren, txt, NULL, NULL);
-        SDL_RenderPresent(ren);
-
-    } while (carregamentoIn < 1.0f);
-    
     Uint32 inicioOut = SDL_GetTicks();
     Uint32 agoraOut;
     float carregamentoOut;
     int transparenciaOut;
 
     SDL_SetTextureBlendMode(txt, SDL_BLENDMODE_BLEND);
-    SDL_SetTextureAlphaMod(txt, 255);
+    SDL_SetTextureAlphaMod(txt, 0);
 
     do {
         agoraOut = SDL_GetTicks();
         carregamentoOut = (float)(agoraOut - inicioOut) / intervalo;
         if (carregamentoOut > 1.0f) carregamentoOut = 1.0f;
 
-        transparenciaOut = 255 - (int)(255 * carregamentoOut);
+        transparenciaOut = (int)(255 * carregamentoOut);
         SDL_SetTextureAlphaMod(txt, transparenciaOut);
 
         SDL_RenderClear(ren);
@@ -670,6 +647,29 @@ void FadeInOut(SDL_Renderer *ren, SDL_Texture *txt, int intervalo){
         SDL_RenderPresent(ren);
 
     } while (carregamentoOut < 1.0f);
+    
+    Uint32 inicioIn = SDL_GetTicks();
+    Uint32 agoraIn;
+    float carregamentoIn;
+    int transparenciaIn;
+
+    SDL_SetTextureBlendMode(txt, SDL_BLENDMODE_BLEND);
+    SDL_SetTextureAlphaMod(txt, 255);
+
+    do {
+        agoraIn = SDL_GetTicks();
+        carregamentoIn = (float)(agoraIn - inicioIn) / intervalo;
+        if (carregamentoIn > 1.0f) carregamentoIn = 1.0f;
+
+        transparenciaIn = 255 - (int)(255 * carregamentoIn);
+        SDL_SetTextureAlphaMod(txt, transparenciaIn);
+
+        SDL_RenderClear(ren);
+
+        SDL_RenderCopy(ren, txt, NULL, NULL);
+        SDL_RenderPresent(ren);
+
+    } while (carregamentoIn < 1.0f);
 }
 
 // ========== FUNÇÕES DE CARREGAMENTO DE ESTADOS ==========
@@ -793,7 +793,7 @@ void carregarOestePantano() {
     esconderTodasImagens(imagens_globais);
     esconderTodosOsTextos(textos_globais);
     definirVisibilidadeImagem(imagens_globais, "Oeste_pantano", true);
-    setTextVisibilidade(textos_globais, "", true);
+    setTextVisibilidade(textos_globais, "mapa_text", true);
 }
 
 void carregarBossNortePantano() {
@@ -1334,19 +1334,19 @@ int main(int argc, char* args[]) {
     adicionarImagem(imagens_globais, criarObjetoImagem("Acampamento_Boss_Ladroes.png", ren, 0, 0, 800, 600), "Acampamento_Boss_Ladroes");
     adicionarImagem(imagens_globais, criarObjetoImagem("Acampamento_Cavaleiro.png", ren, 0, 0, 800, 600), "Acampamento_Cavaleiro");
     adicionarImagem(imagens_globais, criarObjetoImagem("acampamento_ladroes.png", ren, 0, 0, 800, 600), "Acampamento_Ladroes");
-    adicionarImagem(imagens_globais, criarObjetoImagem("Boss_Cavaleiro.png", ren, 300, 150, 200, 300), "Boss_Cavaleiro");
-    adicionarImagem(imagens_globais, criarObjetoImagem("Boss_Ladrao.png", ren, 300, 150, 200, 300), "Boss_Ladrao");
-    adicionarImagem(imagens_globais, criarObjetoImagem("Boss_Caverna.png", ren, 300, 150, 200, 300), "Boss_Caverna");
+    adicionarImagem(imagens_globais, criarObjetoImagem("Boss_Cavaleiro.png", ren, 300, 300, 200, 300), "Boss_Cavaleiro");
+    adicionarImagem(imagens_globais, criarObjetoImagem("Boss_Ladrao.png", ren, 300, 300, 200, 300), "Boss_Ladrao");
+    adicionarImagem(imagens_globais, criarObjetoImagem("Boss_Caverna.png", ren, 250, 200, 300, 400), "Boss_Caverna");
     adicionarImagem(imagens_globais, criarObjetoImagem("Entrada_Caverna.png", ren, 0, 0, 800, 600), "Entrada_Caverna");
     adicionarImagem(imagens_globais, criarObjetoImagem("Interior_Caverna.png", ren, 0, 0, 800, 600), "Interior_Caverna");
-    adicionarImagem(imagens_globais, criarObjetoImagem("Boss_Bruxa_Pantano.png", ren, 300, 150, 200, 300), "Boss_Bruxa_Pantano");
+    adicionarImagem(imagens_globais, criarObjetoImagem("Boss_Bruxa_Pantano.png", ren, 300, 400, 200, 200), "Boss_Bruxa_Pantano");
     adicionarImagem(imagens_globais, criarObjetoImagem("Boss_Fantasma_Pantano.png", ren, 0, 0, 800, 600), "Boss_Fantasma_Pantano");
     adicionarImagem(imagens_globais, criarObjetoImagem("Regiao_Oeste_Pantano_BOSS.png", ren, 0, 0, 800, 600), "Regiao_boss_pantano");
     adicionarImagem(imagens_globais, criarObjetoImagem("Casa_Bruxa_Pantano.png", ren, 0, 0, 800, 600), "Casa_Bruxa_Pantano");
     adicionarImagem(imagens_globais, criarObjetoImagem("Fantasmas_Pantano.png", ren, 0, 0, 800, 600), "Fantasmas_Pantano");
     adicionarImagem(imagens_globais, criarObjetoImagem("Interior_Casa_Bruxa_Pantano.png", ren, 0, 0, 800, 600), "Interior_Casa_Bruxa_Pantano");
-    adicionarImagem(imagens_globais, criarObjetoImagem("Monstro_Pantano.png", ren, 300, 150, 200, 300), "Monstro_Pantano");
-    adicionarImagem(imagens_globais, criarObjetoImagem("Rei_Fantasma.png", ren, 300, 150, 200, 300), "Rei_Fantasma");
+    adicionarImagem(imagens_globais, criarObjetoImagem("Monstro_Pantano.png", ren, 250, 200, 300, 400), "Monstro_Pantano");
+    adicionarImagem(imagens_globais, criarObjetoImagem("Rei_Fantasma.png", ren, 300, 300, 200, 200), "Rei_Fantasma");
     adicionarImagem(imagens_globais, criarObjetoImagem("Fundo_Decidir_Personagem.png", ren, 0, 0, 800, 600), "FundoSelecPers");
 
     // Adicionar TODOS os textos
